@@ -16,6 +16,13 @@ RELEASE = "2026-09-23.1"
 IDS = [f"00000000-0000-4000-8000-{n:012d}" for n in range(1, 5)]
 
 
+def pytest_configure(config):
+    # pytest creates basetemp without parents; a fresh setup has no pytest cache yet.
+    storage = Storage.default()
+    with storage.lease():
+        (storage.root / "pytest").mkdir(exist_ok=True)
+
+
 class FixtureCatalog(Catalog):
     def __init__(self) -> None:
         super().__init__()

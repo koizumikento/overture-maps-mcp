@@ -61,6 +61,10 @@ MCP登録の削除を検知する自動アンインストール、固定ディ�
 
 Ruff check / format、ty、lock整合とfrozen sync、sdist / wheel build、隔離wheelから0.2.0と9 toolの登録を確認した。公式SDKのin-memory MCPで新toolの構造化出力がoutputSchemaに適合し、TextContentとも一致することを確認した。
 
+最終の入力確認で、SDKの関数引数モデルが宣言外の引数を無視することを確認した。公開list_tools / call_tool APIを使う小さなMCPServerサブクラスで、入力スキーマのadditionalProperties=falseとUNKNOWN_ARGUMENTを実装した。country等を誤って独立引数に渡した呼び出しが、データ問い合わせの前に失敗することをSDK経由で確認した。属性の条件はfiltersへ渡す契約を維持した。
+
+初回CIでは、fresh setup後にpytestのbasetemp親`.runtime/pytest`が未作成でfixture初期化に失敗した。pytest開始時に所有・リンクを検証した専用保存先で親を作るよう修正した。以前のテストキャッシュがあるローカル環境の成功を、新規Linux環境の成功と扱わない。最終CIの結果は対象SHAのActionsを参照する。
+
 ### 公開データ
 
 `scripts/verify_complete.py`はexit 0。公式SDKからstdio、protocol 2026-07-28、公開版2026-09-23.1で9 toolを確認した。各タイプの公式schema shardから1件の位置を求め、約0.0002度四方でそのIDを検索した。geometry以外の公式列がすべて返ること、同じID条件で全件数1、同IDの範囲付き詳細取得1を照合した。地理データを永続ファイルに保存していない。

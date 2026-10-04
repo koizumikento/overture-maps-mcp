@@ -26,6 +26,7 @@ async def test_mcp_contract_and_search_detail(
             assert tool.annotations.destructive_hint is False
             assert tool.annotations.open_world_hint is True
             assert tool.output_schema
+            assert tool.input_schema["additionalProperties"] is False
         catalog = await client.call_tool("overture_catalog", {})
         assert not catalog.is_error
         data = catalog.structured_content
@@ -66,3 +67,16 @@ async def test_mcp_contract_and_search_detail(
         assert isinstance(wrong_type.content[0], TextContent)
         assert "INVALID_TYPE" in wrong_type.content[0].text
         assert wrong_type.structured_content is None
+        calls = []
+        original_query = fixture_service.query
+
+        def track_query(sql, parameters):
+            calls.append(sql)
+            return original_query(sql, parameters)
+
+        monkeypatch.setattr(fixture_service, "query", track_query)
+        misspelled = await client.call_tool("overture_search", params | {"country": "JP"})
+        assert misspelled.is_error
+        assert isinstance(misspelled.content[0], TextContent)
+        assert "UNKNOWN_ARGUMENT" in misspelled.content[0].text
+        assert calls == []

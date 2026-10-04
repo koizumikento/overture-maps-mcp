@@ -57,6 +57,8 @@ async def main() -> None:
             )
             assert not nearest.is_error and nearest.structured_content is not None
             assert nearest.structured_content["data"]["returned"] == 1
+            unknown = await client.call_tool("overture_catalog", {"country": "JP"})
+            assert unknown.is_error
             print(
                 json.dumps(
                     {

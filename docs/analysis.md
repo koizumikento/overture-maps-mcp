@@ -4,6 +4,8 @@
 
 ## 属性の取得と条件
 
+宣言されていないtool引数はUNKNOWN_ARGUMENTで拒否する。例えばcountryを検索toolの独立引数として渡さず、filtersのfield="country"として指定する。入力スキーマも追加引数を禁止し、SDKの既定の余分な引数の無視に依存しない。
+
 `fields`を省略するとgeometry以外の全属性を返す。選択時は1〜64パスで、IDと権利確認のための`sources`を保持する。geometryは`include_geometry`、GeoJSONのFeatureCollectionは`output_format="geojson"`。出力はページ単位で、続きは同じ条件のcursorを渡す。永続ファイルは作らない。
 
 `filters`は最大20条件のAND。`eq/ne/in/not_in/gt/gte/lt/lte/between/contains/starts_with/is_null/not_null/contains_any/contains_all`を扱う。構造体は`names.primary`、配列内の構造体は`sources[].dataset`。文字列contains/starts_withは大文字小文字を区別しない。配列containsは要素の完全一致。in/not_inはNULLを含まない値リスト、NULL判定にはis_null/not_nullを使う。単純な名称・分類・class・confidence引数も検索と集計で同じ意味を持つ。値はパラメータへ束縛し、フィールド名はスキーマ確認した属性パスに限る。任意SQLは受け付けない。
