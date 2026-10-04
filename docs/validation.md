@@ -36,3 +36,15 @@ Placesの全件集計は17件、basic_category別の15グループ合計は17、
 GitHub Actionsの合成fixture検証を設定した。CI状態はGitHubの対象commitに紐づく実行結果で確認する。
 
 Codex / Claude Desktopなどのユーザー環境へのMCP登録・実アプリ操作は未実施。公開HTTP配信、認証、PyPI配布は未実施。
+
+## 保存容量管理の追加検証（0.1.1、2026-10-04）
+
+Ruff check / format、ty、frozen syncとlock整合、pytest 35件、sdist / wheel、隔離wheelの5 tool登録が成功した。追加6件は実ファイルを使い、稼働中の削除拒否、異常終了によるOSロック解放、所有不明・想定外の内容の保持、Windowsのディレクトリjunctionを介した外部データの保持、旧生成物の削除、依存なしでの管理コマンド実行を確認した。Linuxでの同じ確認はCI結果で区別する。
+
+DuckDBの実接続でextension_directoryが`C:\workspace\overture-maps-mcp\.runtime\duckdb`、temp_directoryが空であることを確認し、spatial / httpfsの4ファイル（80.26MiB）が専用保存先に作られた。
+
+管理コマンド経由のstdio起動でprotocol 2026-07-28をネゴシエートし、catalog、東京の小範囲でPlaces検索1件、MCP稼働中のclean拒否を確認した（verify_managed.py、exit 0）。loopback HTTPのtools/listとcatalogも成功した。6テーマの公開検索については前節の記録を参照し、今回の追加変更で再実測したのはPlacesのみ。
+
+PowerShell wrapperのstorage / cleanを実際に実行した。MCP終了後、専用`.runtime`、旧`.venv`、`.cache`、`dist`、テストキャッシュ、既知のbytecodeを削除し、再度storageで専用保存先・旧repo内生成物が0 bytesであることを確認した。ソース・docs・Gitと管理用の1 byte lockは保持した。ユーザーホームに以前から存在した共有拡張80.26MiBは対象外として残し、削除前後の4ファイルのhash一致を確認した。
+
+MCP登録の削除を検知する自動アンインストール、固定ディスク容量上限、共有uv / Python本体の削除は実装していない。ユーザー環境へのMCP登録は引き続き未実施。

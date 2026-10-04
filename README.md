@@ -7,9 +7,10 @@ Python 3.12以上、uv、DuckDB、公式MCP Python SDKを使用します。住�
 ## インストール・起動
 
 ```powershell
-uv sync --frozen
-uv run overture-maps-mcp
+.\manage.ps1 run
 ```
+
+初回は依存をインストールします。Windows以外では`uv run --isolated --no-project --no-cache --python 3.12 python -B manage.py run`。管理用Pythonは一時環境で動かし、MCP本体の実行環境を後から削除できるようにしています。
 
 stdioが既定です。ローカルMCPクライアントからの設定例:
 
@@ -18,13 +19,28 @@ stdioが既定です。ローカルMCPクライアントからの設定例:
   "mcpServers": {
     "overture-maps": {
       "command": "uv",
-      "args": ["--directory", "C:/workspace/overture-maps-mcp", "run", "--frozen", "overture-maps-mcp"]
+      "args": ["run", "--isolated", "--no-project", "--no-cache", "--python", "3.12", "python", "-B", "C:/workspace/overture-maps-mcp/manage.py", "run"]
     }
   }
 }
 ```
 
-Streamable HTTPは`uv run overture-maps-mcp --transport streamable-http`、接続先は`http://127.0.0.1:8000/mcp`です。`--port`でポートを変更できます。ローカルホストへbindし、認証や公開配信は本実装に含みません。公開時の条件は[SDKの実行ドキュメント](https://py.sdk.modelcontextprotocol.io/run/deploy/)を参照。
+Streamable HTTPは`.\manage.ps1 run -Transport streamable-http`、接続先は`http://127.0.0.1:8000/mcp`です。`-Port`でポートを変更できます。ローカルホストへbindし、認証や公開配信は本実装に含みません。公開時の条件は[SDKの実行ドキュメント](https://py.sdk.modelcontextprotocol.io/run/deploy/)を参照。
+
+## PCの保存容量と削除
+
+管理コマンド経由の起動では、Python依存・uvキャッシュ・DuckDB拡張・Python bytecodeをリポジトリ内の`.runtime`へ集約します。地理データの永続DBやディスクキャッシュは作りません。起動時に現在の保存容量をstderrへ表示します。
+
+```powershell
+.\manage.ps1 storage   # 保存先・内訳・旧保存先・対象外の共有拡張のサイズを表示
+.\manage.ps1 clean     # MCPを止めてから、専用環境・キャッシュ・拡張を削除
+```
+
+`clean`はソース・docs・Gitを保持し、`.runtime`と旧版のリポジトリ内`.venv`・`.cache`・`dist`・既知のテストキャッシュ・bytecodeを削除します。稼働中のMCPがあれば拒否し、所有マーカーがない保存先や想定外のファイル、外部へのリンクも拒否します。再度`run`すれば依存・拡張を再取得できます。サイズはbytes / MiBとファイル数で表示し、物理占有量とは異なる場合があります。
+
+MCP設定の削除だけではファイルは消えません。設定を外してMCPを停止した後に`clean`を実行してください。削除している環境から管理コマンド自身を実行しないため、直接`uv run python manage.py clean`は使わず、上記のPowerShell wrapperか`uv run --isolated --no-project --no-cache --python 3.12 python -B manage.py clean`を使います。
+
+uv本体・共有Python本体・以前に作られたユーザーホームの`.duckdb/extensions`は削除対象外です。共有拡張は容量表示で別に示し、今後の本MCPはそこへ新規保存しません。管理用の`.runtime.lock`（1 byte）はリポジトリに残します。通常の利用での保存量は依存や拡張の版により変わり、固定のディスク容量上限は設定していません。
 
 ## Tools
 
@@ -76,7 +92,11 @@ Streamable HTTPは`uv run overture-maps-mcp --transport streamable-http`、接�
 ## 開発・検証
 
 ```powershell
-uv sync --frozen
+.\manage.ps1 setup -Dev
+$env:UV_PROJECT_ENVIRONMENT = "$PWD/.runtime/venv"
+$env:UV_CACHE_DIR = "$PWD/.runtime/uv-cache"
+$env:PYTHONPYCACHEPREFIX = "$PWD/.runtime/pycache"
+uv run python -c "import duckdb; from overture_maps_mcp.storage import Storage; duckdb.connect(config={'extension_directory': str(Storage.default().extension_directory())}).execute('INSTALL spatial')"
 uv run ruff check .
 uv run ruff format --check .
 uv run ty check .
@@ -86,6 +106,6 @@ uv build
 
 ローカルの合成Parquet fixtureによるSQL・geometry・ページング・集計検証とMCP接続試験を既定にします。公開データの問い合わせや実クライアント接続の結果は[validation](docs/validation.md)で別に記録します。
 
-公開データを実際に読む接続確認は`uv run python scripts/verify_live.py`（stdio・6テーマ）、`uv run python scripts/verify_http.py`（loopback HTTP・catalog）。既定のpytestには含まれません。
+公開データを実際に読む接続確認は`uv run python scripts/verify_managed.py`（管理コマンド経由のstdio・Places検索・稼働中削除の拒否）、`uv run python scripts/verify_live.py`（stdio・6テーマ）、`uv run python scripts/verify_http.py`（loopback HTTP・catalog）。既定のpytestには含まれません。
 
 設計・受入条件: [requirements](docs/requirements.md)。参考: [PlaceRoot](https://github.com/chuofringer/placeroot)、[Overture Maps MCP Server](https://github.com/srivinod1/overture-mcp-server)、[Soapbox MCP](https://github.com/soapboxbuild/overture-mcp)。これらの機能分割を参考にし、コードは複製していません。

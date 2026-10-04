@@ -10,6 +10,7 @@ import pytest
 from overture_maps_mcp.catalog import Catalog
 from overture_maps_mcp.models import TYPES, Bounds, Theme
 from overture_maps_mcp.service import Service
+from overture_maps_mcp.storage import Storage
 
 RELEASE = "2026-09-23.1"
 IDS = [f"00000000-0000-4000-8000-{n:012d}" for n in range(1, 5)]
@@ -35,7 +36,9 @@ def bounds() -> Bounds:
 
 @pytest.fixture
 def fixture_service(tmp_path: Path) -> Iterator[Service]:
-    conn = duckdb.connect()
+    conn = duckdb.connect(
+        config={"extension_directory": str(Storage.default().extension_directory())}
+    )
     conn.execute("LOAD spatial")
     paths = {}
     for theme, types in TYPES.items():

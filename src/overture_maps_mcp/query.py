@@ -14,6 +14,7 @@ from uuid import UUID
 import duckdb
 
 from overture_maps_mcp.models import Bounds, QueryError
+from overture_maps_mcp.storage import Storage, StorageError
 
 Query = Callable[[str, list[Any]], list[dict[str, Any]]]
 MAX_RESPONSE_BYTES = 400_000
@@ -27,9 +28,18 @@ def connection():
         raise QueryError("BUSY: two queries are running; retry after they finish.")
     conn = None
     timer = None
+    lease = None
     try:
+        storage = Storage.default()
+        lease = storage.lease()
+        lease.__enter__()
         conn = duckdb.connect(
-            config={"memory_limit": "512MB", "threads": "2", "temp_directory": ""}
+            config={
+                "memory_limit": "512MB",
+                "threads": "2",
+                "temp_directory": "",
+                "extension_directory": str(storage.extension_directory()),
+            }
         )
         timer = threading.Timer(30, conn.interrupt)
         timer.daemon = True
@@ -38,6 +48,8 @@ def connection():
         conn.execute("INSTALL spatial; LOAD spatial; INSTALL httpfs; LOAD httpfs;")
         conn.execute("SET s3_region = 'us-west-2'; SET http_timeout = 10; SET http_retries = 1")
         yield conn
+    except StorageError as exc:
+        raise QueryError(str(exc)) from exc
     except duckdb.Error as exc:
         raise QueryError(
             "QUERY_FAILED: data, extension or schema unavailable, or time/memory limit exceeded. "
@@ -50,6 +62,8 @@ def connection():
             timer.join()
         if conn:
             conn.close()
+        if lease:
+            lease.__exit__(None, None, None)
         _gate.release()
 
 

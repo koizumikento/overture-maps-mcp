@@ -8,16 +8,27 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          enable-cache: false
       - uses: actions/setup-python@v7
         with:
           python-version-file: .python-version
-      - run: uv sync --frozen
+      - name: Prepare managed development environment
+        run: |
+          uv run --isolated --no-project --no-cache --python 3.12 python -B manage.py setup --dev
+          echo "UV_PROJECT_ENVIRONMENT=$GITHUB_WORKSPACE/.runtime/venv" >> "$GITHUB_ENV"
+          echo "UV_CACHE_DIR=$GITHUB_WORKSPACE/.runtime/uv-cache" >> "$GITHUB_ENV"
+          echo "PYTHONPYCACHEPREFIX=$GITHUB_WORKSPACE/.runtime/pycache" >> "$GITHUB_ENV"
       - name: Prepare DuckDB extension (no map data)
-        run: uv run python -c "import duckdb; duckdb.connect().execute('INSTALL spatial')"
+        run: uv run python -c "import duckdb; from overture_maps_mcp.storage import Storage; duckdb.connect(config={'extension_directory': str(Storage.default().extension_directory())}).execute('INSTALL spatial')"
       - run: uv run ruff check .
       - run: uv run ruff format --check .
       - run: uv run ty check .
       - run: uv run pytest
       - run: uv build
       - name: Clean wheel registration
-        run: uv run --isolated --no-project --with dist/overture_maps_mcp-0.1.0-py3-none-any.whl python -c "import asyncio; from overture_maps_mcp.server import mcp; assert len(asyncio.run(mcp.list_tools())) == 5"
+        run: uv run --isolated --no-project --with dist/overture_maps_mcp-0.1.1-py3-none-any.whl python -c "import asyncio; from overture_maps_mcp.server import mcp; assert len(asyncio.run(mcp.list_tools())) == 5"
+      - name: Dependency-free cleanup
+        run: |
+          uv run --isolated --no-project --no-cache --python 3.12 python -B manage.py clean
+          uv run --isolated --no-project --no-cache --python 3.12 python -B manage.py storage

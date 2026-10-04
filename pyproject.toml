@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "overture-maps-mcp"
-version = "0.1.0"
+version = "0.1.1"
 description = "Read-only MCP search and spatial analysis across all six Overture Maps themes"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -26,6 +26,7 @@ packages = ["src/overture_maps_mcp"]
 [tool.ruff]
 target-version = "py312"
 line-length = 100
+cache-dir = ".runtime/ruff"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
@@ -33,6 +34,7 @@ select = ["E", "F", "I", "UP", "B"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
+cache_dir = ".runtime/pytest"
 
 [tool.ty.environment]
 python-version = "3.12"
