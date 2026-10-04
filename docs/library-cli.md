@@ -4,7 +4,7 @@
 
 ## インストール
 
-Python 3.12以上。PyPIへは未公開。privateリポジトリをcloneしたパスから、他のアプリ内では`uv add C:/workspace/overture-maps-mcp`、CLI用には`uv tool install C:/workspace/overture-maps-mcp`で導入する。通常の依存はDuckDB / HTTPX / Pydantic。MCP SDKは`uv add "C:/workspace/overture-maps-mcp[mcp]"`等の任意extraとして追加する。既存のmanage.py run / setupはこのextraを指定するため、MCPの起動方法は変わらない。
+Python 3.12以上。ソースは[GitHub](https://github.com/koizumikento/overture-maps-mcp)でMITライセンスとして公開している。PyPIへは未公開。cloneしたパスから、他のアプリ内では`uv add C:/workspace/overture-maps-mcp`、CLI用には`uv tool install C:/workspace/overture-maps-mcp`で導入する。通常の依存はDuckDB / HTTPX / Pydantic。MCP SDKは`uv add "C:/workspace/overture-maps-mcp[mcp]"`等の任意extraとして追加する。既存のmanage.py run / setupはこのextraを指定するため、MCPの起動方法は変わらない。
 
 ## 公開Python API
 

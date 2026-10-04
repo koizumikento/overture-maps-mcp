@@ -36,6 +36,8 @@ print(client.storage_dir)
 ## インストール・起動
 
 ```powershell
+git clone https://github.com/koizumikento/overture-maps-mcp.git
+cd overture-maps-mcp
 .\manage.ps1 run
 ```
 
