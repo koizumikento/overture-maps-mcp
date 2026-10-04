@@ -98,3 +98,21 @@ Loopback Streamable HTTPでprotocol 2026-07-28、9 tool、catalog、公開近傍
 ### 境界
 
 各15タイプの1件確認は、その全地物・地域網羅率・全属性値の品質・最大領域での性能を保証しない。距離と円クリップの近似、面積/線長の計測対象、ID安定性、範囲内スナップショット差分の意味はanalysisと返却データに記録する。他MCPとの連携、ユーザーのCodex等への登録・実UI操作、公開HTTP配信、認証、PyPI公開は対象外。
+
+## ライブラリ・CLI対応（0.3.0、2026-10-04）
+
+公開Clientの9メソッドをMCP/CLI共通入口にした。MCP SDKは任意extraへ移し、型付き公開モデル・py.typed、JSON/通常引数/ファイル/stdinのCLI、独立した保存先を提供する。契約は[library-cli](library-cli.md)。管理起動は従来の専用.runtimeを維持する。
+
+pytestは102件。追加21件でPythonとCLIの全9操作の結果・出典の一致、通常flagとJSONの一致、範囲/型/列挙値/未宣言引数が問い合わせ前に失敗すること、UTF-8 BOMのファイルとstdin、入力サイズ上限・重複指定・クエリエラーのstdout/stderr/終了コード、全コマンドのhelp、既定保存先がcwdから独立すること、Client別の保存先が環境変数を変えないことを確認する。CLI cleanは呼び出し側の.venvを保持し、稼働中・削除対象内Pythonを拒否する。共有拡張の保存/所有/リンク境界に関する既存テストも維持する。
+
+Ruff check / format、ty、lock整合、buildを確認する。scripts/verify_distribution.pyはMCP未インストールの隔離core wheelで0.3.0、公開Client、py.typed、実CLIの9 help / storage、MCPを起動した際のextra案内、python -Sによる依存なしのcleanを確認する。[mcp]付きの隔離wheelでは9 toolの登録を別に確認する。
+
+core wheelの最初の検証で、Windowsの既定cp932ではhelpのm²がUnicodeEncodeErrorになった。CLI stdout/stderrをUTF-8へ設定し、全9 helpの成功を確認した。新規環境でMCPなしのwheelを使えることを、MCPが入った開発環境の成功と区別する。
+
+PowerShellのmanage.ps1 cliでも--version 0.3.0、--prettyと通常の検索flag、公開Places検索1件・出典保持を確認した。管理起動のCLI共通optionが先頭にあっても渡せるようにし、従来のsetup/run/cleanの引数処理は維持した。
+
+scripts/verify_library_cli.pyはMCPなしの隔離core wheelでexit 0。公開2026-09-23.1・東京139.760,35.680〜139.762,35.682の検索2件・集計17件について、Python APIと実CLIのUTF-8 JSON結果が出典等も含め完全一致した。CLI検索はstdin JSON、集計は通常flagで確認し、公開地理データのファイルを作っていない。
+
+管理起動のstdioはprotocol 2026-07-28、catalog・公開Places検索1件、稼働中clean拒否を確認してexit 0。loopback Streamable HTTPも同protocol・9 tool・catalog・公開近傍1件・追加引数拒否でexit 0。0.2.0での全15タイプ検証は前節の記録であり、0.3.0で全タイプを再実測したとは扱わない。今回の変更は同じServiceを公開APIで包む構造で、既存15タイプ・分析SQLのローカル回帰検証を維持した。
+
+CIは当該SHAのActions結果で区別する。PyPI公開、公開HTTP配信、ユーザーの常用環境へのCLIインストール・Codex設定変更は行わず、検証は専用/隔離環境で実施した。

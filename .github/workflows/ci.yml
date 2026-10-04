@@ -19,6 +19,7 @@ jobs:
           echo "UV_PROJECT_ENVIRONMENT=$GITHUB_WORKSPACE/.runtime/venv" >> "$GITHUB_ENV"
           echo "UV_CACHE_DIR=$GITHUB_WORKSPACE/.runtime/uv-cache" >> "$GITHUB_ENV"
           echo "PYTHONPYCACHEPREFIX=$GITHUB_WORKSPACE/.runtime/pycache" >> "$GITHUB_ENV"
+          echo "OVERTURE_MAPS_MCP_STORAGE_DIR=$GITHUB_WORKSPACE/.runtime" >> "$GITHUB_ENV"
       - name: Prepare DuckDB extension (no map data)
         run: |
           uv run python -c "import duckdb; from overture_maps_mcp.storage import Storage; duckdb.connect(config={'extension_directory': str(Storage.default().extension_directory())}).execute('INSTALL spatial')"
@@ -27,8 +28,10 @@ jobs:
       - run: uv run ty check .
       - run: uv run pytest
       - run: uv build
-      - name: Clean wheel registration
-        run: uv run --isolated --no-project --no-cache --with dist/overture_maps_mcp-0.2.0-py3-none-any.whl python -c "import asyncio; from overture_maps_mcp.server import mcp; assert len(asyncio.run(mcp.list_tools())) == 9"
+      - name: Core wheel without MCP dependencies
+        run: uv run --isolated --no-project --no-cache --with dist/overture_maps_mcp-0.3.0-py3-none-any.whl python scripts/verify_distribution.py
+      - name: Optional MCP wheel registration
+        run: uv run --isolated --no-project --no-cache --with 'dist/overture_maps_mcp-0.3.0-py3-none-any.whl[mcp]' python -c "import asyncio; from overture_maps_mcp.server import mcp; assert len(asyncio.run(mcp.list_tools())) == 9"
       - name: Dependency-free cleanup
         run: |
           uv run --isolated --no-project --no-cache --python 3.12 python -B manage.py clean

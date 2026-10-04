@@ -569,7 +569,7 @@ def test_distance_ties_and_cursor_projection_scope(fixture_service, bounds):
 
 @pytest.mark.asyncio
 async def test_new_tools_mcp_contract(analysis_service, monkeypatch):
-    monkeypatch.setattr(server, "service", analysis_service)
+    monkeypatch.setattr(server.client, "_service", analysis_service)
     async with Client(server.mcp) as client:
         schemas = {t.name: t.output_schema for t in (await client.list_tools()).tools}
         cases = {

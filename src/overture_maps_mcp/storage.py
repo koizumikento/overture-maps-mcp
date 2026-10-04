@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import shutil
+import sys
 import time
 from contextlib import contextmanager
 from pathlib import Path
@@ -98,7 +99,7 @@ def footprint(path: Path) -> dict[str, int | float]:
 
 class Storage:
     def __init__(self, project: Path) -> None:
-        self.project = project.resolve(strict=True)
+        self.project = project.resolve()
         self.root = self.project / ".runtime"
         self.guard = self.project / ".runtime.lock"
 
@@ -106,15 +107,28 @@ class Storage:
     def default(cls) -> Storage:
         configured = os.environ.get("OVERTURE_MAPS_MCP_STORAGE_DIR")
         if configured:
-            root = Path(configured).absolute()
-            if root.name != ".runtime" or linked(root):
-                raise StorageError(
-                    "UNSAFE_PATH: configured storage must be an unlinked .runtime directory."
-                )
-            return cls(root.parent)
-        return cls(Path.cwd())
+            return cls.for_runtime(configured)
+        if os.name == "nt":
+            fallback = Path.home() / "AppData" / "Local"
+            location = os.environ.get("LOCALAPPDATA")
+        else:
+            fallback = Path.home() / ".cache"
+            location = os.environ.get("XDG_CACHE_HOME")
+        base = Path(location).expanduser() if location else fallback
+        if not base.is_absolute():
+            base = fallback
+        return cls.for_runtime(base / "overture-maps-mcp" / ".runtime")
+
+    @classmethod
+    def for_runtime(cls, directory: str | Path) -> Storage:
+        root = Path(directory).expanduser().absolute()
+        if root.name != ".runtime" or any(linked(p) for p in (root, *root.parents)):
+            raise StorageError("UNSAFE_PATH: storage must be an unlinked .runtime directory.")
+        return cls(root.parent)
 
     def validate(self) -> None:
+        if any(linked(p) for p in (self.project, *self.project.parents)):
+            raise StorageError("UNSAFE_PATH: storage parent is a link.")
         if linked(self.root) or self.root.resolve() != self.project / ".runtime":
             raise StorageError("UNSAFE_PATH: .runtime must be inside this repository.")
         if self.root.exists():
@@ -144,12 +158,16 @@ class Storage:
             (self.root / ".owner.json").write_text(json.dumps(OWNER), encoding="utf-8")
 
     def initialize(self) -> None:
+        self.validate()
+        self.project.mkdir(parents=True, exist_ok=True)
         with file_lock(self.guard):
             self._ensure()
 
     @contextmanager
     def lease(self):
         """Crash-safe OS locks protect live servers without relying on stale PIDs."""
+        self.validate()
+        self.project.mkdir(parents=True, exist_ok=True)
         with file_lock(self.guard):
             self._ensure()
             leases = self.root / ".leases"
@@ -180,7 +198,7 @@ class Storage:
         environment.pop("VIRTUAL_ENV", None)
         return environment
 
-    def report(self) -> dict[str, Any]:
+    def report(self, *, include_legacy: bool = True) -> dict[str, Any]:
         self.validate()
         owned = footprint(self.root)
         shared = Path.home() / ".duckdb" / "extensions"
@@ -189,7 +207,9 @@ class Storage:
             "size_kind": "logical_file_bytes; hardlinks may be counted more than once",
             "owned": owned,
             "components": {name: footprint(self.root / name) for name in COMPONENTS},
-            "legacy_in_repository": {name: footprint(self.project / name) for name in LEGACY},
+            "legacy_in_repository": (
+                {name: footprint(self.project / name) for name in LEGACY} if include_legacy else {}
+            ),
             "shared_duckdb_extensions_excluded_from_cleanup": {
                 "path": str(shared),
                 **footprint(shared),
@@ -234,7 +254,10 @@ class Storage:
             result.append(path)
         return result
 
-    def clean(self, legacy_only: bool = False) -> list[str]:
+    def clean(self, legacy_only: bool = False, *, include_legacy: bool = True) -> list[str]:
+        self.validate()
+        if not self.project.exists():
+            return []
         with file_lock(self.guard):
             self.validate()
             leases = self.root / ".leases"
@@ -242,9 +265,13 @@ class Storage:
                 for path in leases.iterdir():
                     with file_lock(path, timeout=0):
                         pass  # Dead processes release their locks automatically.
-            targets = self._legacy_targets()
+            targets = self._legacy_targets() if include_legacy else []
             if self.root.exists() and not legacy_only:
                 targets.insert(0, self.root)
+            if any(Path(sys.prefix).resolve().is_relative_to(p.resolve()) for p in targets):
+                raise StorageError(
+                    "EXTERNAL_PYTHON_REQUIRED: run cleanup from Python outside this storage."
+                )
             # All absolute targets have been checked before the first recursive removal.
             for path in targets:
                 shutil.rmtree(path)

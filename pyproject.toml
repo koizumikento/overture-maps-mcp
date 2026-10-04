@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "overture-maps-mcp"
-version = "0.2.0"
-description = "Read-only MCP search and spatial analysis across all six Overture Maps themes"
+version = "0.3.0"
+description = "Overture Maps geographic search and analysis for Python, CLI and MCP"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
@@ -13,11 +13,14 @@ authors = [{name = "straydog"}]
 dependencies = [
     "duckdb>=1.5.0,<2",
     "httpx>=0.28.1,<1",
-    "mcp>=2.2.0,<3",
     "pydantic>=2.13.5,<3",
 ]
 
+[project.optional-dependencies]
+mcp = ["mcp>=2.2.0,<3"]
+
 [project.scripts]
+overture-maps = "overture_maps_mcp.cli:main"
 overture-maps-mcp = "overture_maps_mcp.__main__:main"
 
 [tool.hatch.build.targets.wheel]
@@ -41,6 +44,7 @@ python-version = "3.12"
 
 [dependency-groups]
 dev = [
+    "mcp>=2.2.0,<3",
     "jsonschema>=4.26.0",
     "pytest>=9.1.1",
     "pytest-asyncio>=1.4.0",

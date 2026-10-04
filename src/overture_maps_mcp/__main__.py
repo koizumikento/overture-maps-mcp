@@ -4,7 +4,6 @@ import argparse
 import logging
 import sys
 
-from overture_maps_mcp.server import mcp
 from overture_maps_mcp.storage import Storage, footprint
 
 
@@ -13,6 +12,12 @@ def main() -> None:
     parser.add_argument("--transport", choices=("stdio", "streamable-http"), default="stdio")
     parser.add_argument("--port", type=int, default=8000, help="Loopback HTTP port (default: 8000)")
     args = parser.parse_args()
+    try:
+        from overture_maps_mcp.server import mcp
+    except ModuleNotFoundError as exc:
+        if exc.name == "mcp":
+            parser.exit(1, "MCP support is optional: install overture-maps-mcp[mcp].\n")
+        raise
     logging.getLogger("httpx").setLevel(logging.WARNING)
     storage = Storage.default()
     with storage.lease():

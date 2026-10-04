@@ -28,7 +28,12 @@ def main() -> int:
     run = actions.add_parser("run", help="Start the MCP with dedicated venv/cache/extensions")
     run.add_argument("--transport", choices=("stdio", "streamable-http"), default="stdio")
     run.add_argument("--port", type=int, default=8000)
-    args = parser.parse_args()
+    cli = actions.add_parser("cli", help="Run geographic CLI using dedicated core dependencies")
+    cli.add_argument("arguments", nargs=argparse.REMAINDER)
+    argv = sys.argv[1:]
+    args = parser.parse_args(argv[:1] if argv and argv[0] == "cli" else argv)
+    if args.action == "cli":
+        args.arguments = argv[1:]
     storage = Storage(PROJECT)
     try:
         if args.action == "storage":
@@ -47,9 +52,18 @@ def main() -> int:
             with storage.lease():
                 env = storage.environment()
                 if args.action == "setup":
-                    command = ["uv", "sync", "--frozen"]
+                    command = ["uv", "sync", "--frozen", "--extra", "mcp"]
                     if not args.dev:
                         command.append("--no-dev")
+                elif args.action == "cli":
+                    command = [
+                        "uv",
+                        "run",
+                        "--frozen",
+                        "--no-dev",
+                        "overture-maps",
+                        *args.arguments,
+                    ]
                 else:
                     size = footprint(storage.root)["bytes"] / 1024**2
                     print(
@@ -60,6 +74,8 @@ def main() -> int:
                         "run",
                         "--frozen",
                         "--no-dev",
+                        "--extra",
+                        "mcp",
                         "overture-maps-mcp",
                         "--transport",
                         args.transport,

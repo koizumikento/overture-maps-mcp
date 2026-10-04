@@ -20,7 +20,7 @@ _gate = threading.BoundedSemaphore(2)
 
 
 @contextmanager
-def connection():
+def connection(storage: Storage | None = None):
     """Two bounded in-process queries; cancel database work after 30 seconds."""
     if not _gate.acquire(timeout=1):
         raise QueryError("BUSY: two queries are running; retry after they finish.")
@@ -28,7 +28,7 @@ def connection():
     timer = None
     lease = None
     try:
-        storage = Storage.default()
+        storage = storage or Storage.default()
         lease = storage.lease()
         lease.__enter__()
         conn = duckdb.connect(
@@ -65,8 +65,10 @@ def connection():
         _gate.release()
 
 
-def execute(sql: str, parameters: list[Any]) -> list[dict[str, Any]]:
-    with connection() as conn:
+def execute(
+    sql: str, parameters: list[Any], *, storage: Storage | None = None
+) -> list[dict[str, Any]]:
+    with connection(storage) as conn:
         result = conn.execute(sql, parameters)
         names = [col[0] for col in result.description]
         return [dict(zip(names, row, strict=True)) for row in result.fetchall()]

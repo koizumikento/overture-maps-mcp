@@ -15,7 +15,7 @@ from tests.conftest import RELEASE
 async def test_mcp_contract_and_search_detail(
     monkeypatch, fixture_service: Service, bounds: Bounds
 ):
-    monkeypatch.setattr(server, "service", fixture_service)
+    monkeypatch.setattr(server.client, "_service", fixture_service)
     async with Client(server.mcp) as client:
         tools = (await client.list_tools()).tools
         assert len(tools) == 9

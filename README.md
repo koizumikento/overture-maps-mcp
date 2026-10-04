@@ -1,8 +1,37 @@
 # overture-maps-mcp
 
-Overture Mapsの6テーマを検索・分析する、読み取り専用MCPサーバーです。公式Overture製品ではなく、独立した実装です。
+Overture Mapsの6テーマを検索・分析する、Pythonライブラリ・CLI・読み取り専用MCPサーバーです。公式Overture製品ではなく、独立した実装です。
 
-Python 3.12以上、uv、DuckDB、公式MCP Python SDKを使用します。住所から座標を得る処理はgeo-jp-mcp等へ任せ、座標・検索範囲・地物IDを渡して組み合わせます。
+Python 3.12以上、uv、DuckDBを使用し、MCP接続には任意依存の公式MCP Python SDKを使います。住所から座標を得る処理はgeo-jp-mcp等へ任せ、座標・検索範囲・地物IDを渡して組み合わせます。
+
+## Pythonライブラリ・CLI（0.3.0）
+
+通常のインストールにはMCP SDKを含みません。MCPサーバーを使う場合だけ`[mcp]`を追加します。PyPIには未公開のため、取得したこのリポジトリからインストールしてください。
+
+```powershell
+uv add C:/workspace/overture-maps-mcp       # 他のPythonプロジェクトの依存へ追加
+uv tool install C:/workspace/overture-maps-mcp  # CLIとしてインストール
+overture-maps --help
+overture-maps search --theme places --type place --bounds 139.760 35.680 139.762 35.682 --limit 2
+```
+
+```python
+from overture_maps_mcp import Client, Bounds
+
+client = Client()
+result = client.search(
+    "places",
+    "place",
+    bounds=Bounds(west=139.760, south=35.680, east=139.762, north=35.682),
+    limit=2,
+)
+print(result.data)
+print(client.storage_dir)
+```
+
+ライブラリ・CLI・MCPは同じ9操作、型付き入力検証とResponseを使います。結果・出典を含むJSON、全操作の引数、JSONファイル・stdin、エラー、保存先と互換性の契約は[ライブラリ・CLIガイド](docs/library-cli.md)を参照してください。
+
+リポジトリから依存を専用保存先へ集めてCLIを使う場合は`./manage.ps1 cli search --theme places --type place --bounds 139.760 35.680 139.762 35.682 --limit 2`。Windows以外は`uv run --isolated --no-project --no-cache --python 3.12 python -B manage.py cli search ...`。
 
 ## インストール・起動
 
@@ -106,6 +135,7 @@ uv本体・共有Python本体・以前に作られたユーザーホームの`.d
 $env:UV_PROJECT_ENVIRONMENT = "$PWD/.runtime/venv"
 $env:UV_CACHE_DIR = "$PWD/.runtime/uv-cache"
 $env:PYTHONPYCACHEPREFIX = "$PWD/.runtime/pycache"
+$env:OVERTURE_MAPS_MCP_STORAGE_DIR = "$PWD/.runtime"
 uv run python -c "import duckdb; from overture_maps_mcp.storage import Storage; duckdb.connect(config={'extension_directory': str(Storage.default().extension_directory())}).execute('INSTALL spatial')"
 uv run ruff check .
 uv run ruff format --check .

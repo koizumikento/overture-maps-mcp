@@ -413,18 +413,23 @@ wheels = [
 
 [[package]]
 name = "overture-maps-mcp"
-version = "0.2.0"
+version = "0.3.0"
 source = { editable = "." }
 dependencies = [
     { name = "duckdb" },
     { name = "httpx" },
-    { name = "mcp" },
     { name = "pydantic" },
+]
+
+[package.optional-dependencies]
+mcp = [
+    { name = "mcp" },
 ]
 
 [package.dev-dependencies]
 dev = [
     { name = "jsonschema" },
+    { name = "mcp" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
     { name = "ruff" },
@@ -435,13 +440,14 @@ dev = [
 requires-dist = [
     { name = "duckdb", specifier = ">=1.5.0,<2" },
     { name = "httpx", specifier = ">=0.28.1,<1" },
-    { name = "mcp", specifier = ">=2.2.0,<3" },
+    { name = "mcp", marker = "extra == 'mcp'", specifier = ">=2.2.0,<3" },
     { name = "pydantic", specifier = ">=2.13.5,<3" },
 ]
 
 [package.metadata.requires-dev]
 dev = [
     { name = "jsonschema", specifier = ">=4.26.0" },
+    { name = "mcp", specifier = ">=2.2.0,<3" },
     { name = "pytest", specifier = ">=9.1.1" },
     { name = "pytest-asyncio", specifier = ">=1.4.0" },
     { name = "ruff", specifier = ">=0.16.10" },
