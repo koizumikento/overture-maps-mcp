@@ -20,7 +20,8 @@ jobs:
           echo "UV_CACHE_DIR=$GITHUB_WORKSPACE/.runtime/uv-cache" >> "$GITHUB_ENV"
           echo "PYTHONPYCACHEPREFIX=$GITHUB_WORKSPACE/.runtime/pycache" >> "$GITHUB_ENV"
       - name: Prepare DuckDB extension (no map data)
-        run: uv run python -c "import duckdb; from overture_maps_mcp.storage import Storage; duckdb.connect(config={'extension_directory': str(Storage.default().extension_directory())}).execute('INSTALL spatial')"
+        run: |
+          uv run python -c "import duckdb; from overture_maps_mcp.storage import Storage; duckdb.connect(config={'extension_directory': str(Storage.default().extension_directory())}).execute('INSTALL spatial')"
       - run: uv run ruff check .
       - run: uv run ruff format --check .
       - run: uv run ty check .
