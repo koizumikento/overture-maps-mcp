@@ -4,7 +4,9 @@
 
 ## 契約
 
-5つのtoolと標準の構造化出力を使う。readOnlyHint=true、destructiveHint=false、idempotentHint=true、openWorldHint=true。annotationは権限の証明ではなく、サーバー側で範囲・上限・クエリ入力を制約する。protocol errorとtool execution errorを区別し、利用不可・invalid cursor・unsupported filterを空成功に変換しない。
+9つのtoolと標準の構造化出力を使う。readOnlyHint=true、destructiveHint=false、idempotentHint=true、openWorldHint=true。annotationは権限の証明ではなく、サーバー側で範囲・上限・クエリ入力を制約する。protocol errorとtool execution errorを区別し、利用不可・invalid cursor・unsupported filterを空成功に変換しない。
+
+2026-10-04追加承認: ユーザーが機能確認の不足項目について「他の自作MCPとの連携はここではどうでもいいから、他をすべて対応」と指定した。全属性の取得と選択・型付き条件、同条件集計、半径・近傍・穴付きPolygon/MultiPolygon、数値統計と距離・面積・道路長、テーマ間空間結合、GERS ID解決、リリース比較、全15タイプの実データ検証を追加対象とする。他MCPとの連携評価は対象外。地図描画・住所文字列のgeocoding・経路探索を本MCPの担当へ変更する指示とは扱わない。操作の意味・上限・例は[analysis](analysis.md)を参照する。
 
 検索と詳細・集計は同じ明示releaseを使う。IDはOverture地物の識別子で、GERS対象外の型やID変化を表示する。独自法人情報・統計・不動産データとの関連付けは呼び出し元の責務。名称のみの一致を同一対象の証明にしない。
 

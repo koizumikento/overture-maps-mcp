@@ -26,7 +26,7 @@ async def main() -> None:
     async with Client(
         StdioServerParameters(command=manager[0], args=[*manager[1:], "run"])
     ) as client:
-        assert len((await client.list_tools()).tools) == 5
+        assert len((await client.list_tools()).tools) == 9
         catalog = await client.call_tool("overture_catalog", {})
         assert not catalog.is_error and catalog.structured_content is not None
         release = catalog.structured_content["release"]

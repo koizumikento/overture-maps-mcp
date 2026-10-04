@@ -31,6 +31,8 @@ Streamable HTTPは`.\manage.ps1 run -Transport streamable-http`、接続先は`h
 
 管理コマンド経由の起動では、Python依存・uvキャッシュ・DuckDB拡張・Python bytecodeをリポジトリ内の`.runtime`へ集約します。地理データの永続DBやディスクキャッシュは作りません。起動時に現在の保存容量をstderrへ表示します。
 
+開発テストの合成Parquet fixtureも`.runtime/pytest/tmp`へ置き、同じcleanで削除できます。
+
 ```powershell
 .\manage.ps1 storage   # 保存先・内訳・旧保存先・対象外の共有拡張のサイズを表示
 .\manage.ps1 clean     # MCPを止めてから、専用環境・キャッシュ・拡張を削除
@@ -48,9 +50,13 @@ uv本体・共有Python本体・以前に作られたユーザーホームの`.d
 |---|---|
 | `overture_catalog` | 最新・利用可能リリース、6テーマとタイプ、上限の確認 |
 | `overture_schema` | 選択データの列・型の確認 |
-| `overture_search` | 範囲と属性で地物を検索、cursorで続きのページを取得 |
-| `overture_get_feature` | 検索で得たUUIDと既知の範囲から詳細取得 |
-| `overture_summarize` | 範囲内の全該当地物の件数、属性別集計 |
+| `overture_search` | 矩形・半径・ポリゴンと属性条件で検索、全属性/選択属性、ページング、GeoJSON |
+| `overture_get_feature` | UUIDの詳細取得。範囲を省略すると現在のGERSで解決 |
+| `overture_summarize` | 検索と同条件で全件数・複数属性別集計・数値統計・面積・道路長・距離 |
+| `overture_nearest` | 最大半径内の近傍検索。距離とIDによる順序・ページング |
+| `overture_spatial_join` | 2テーマ/タイプの交差・包含・接触・重複・距離条件。ペア/全件数/左地物別件数 |
+| `overture_compare_releases` | 2リリースを同じ条件で比較、追加・削除・変更・不変の件数と詳細 |
+| `overture_resolve_id` | 位置・テーマ不明のUUIDをGERSで解決。現存・削除・未収録を区別 |
 
 6テーマ: `addresses`, `base`, `buildings`, `divisions`, `places`, `transportation`。タイプの組み合わせはcatalogが返します。地図描画・住所文字列のgeocoding・経路探索は担当しません。これらを必要とするクライアントは別のMCPと組み合わせてください。
 
@@ -71,16 +77,20 @@ uv本体・共有Python本体・以前に作られたユーザーホームの`.d
 
 この版は説明例です。公開データは最大60日保持のため、実利用時はcatalogが返す版を使います。Placesの分類は現行`taxonomy.primary`、名前は大文字小文字を区別しない文字列包含で検索します。存在しない列のフィルタは無視せずエラーを返します。
 
+0.2.0では属性を既定で全列返し、`fields`で選択できます。`filters`は型付きの20条件、構造体・配列内の属性も扱います。半径・近傍・Polygon/MultiPolygon、検索と同条件の数値/空間集計、空間結合と版比較の具体例と計測の意味は[検索・分析ガイド](docs/analysis.md)を参照してください。
+
 ## 結果・上限
 
 - 結果は`release`, `theme`, `feature_type`, `scope`, `source`, `license`, `attribution_url`, `data`, `next_cursor`, `warnings`を持つ構造化データです。
 - WGS84の矩形範囲は東西・南北1度以内、概算2500km²以内。日付変更線をまたぐ範囲は分割します。
 - 1ページ最大50件。次ページではrelease・範囲・フィルタ・geometry設定を維持します。
-- bboxで候補を絞り、geometryとの交差判定で該当地物を選びます。集計は交差する地物の数で、面積・道路長による加重ではありません。
+- bboxで候補を絞り、geometryとの交差・距離条件で地物を選びます。件数はレコード数。面積・線の長さは別の指標で、WGS84楕円体のm² / mです。
 - 集計の上位50グループを返し、`other_count`で省略分を示します。検索ページの件数を全件数として扱いません。
 - geometryは検索では既定で省略。詳細取得で確認できます。dataは最大400KB、超過時は件数・範囲・geometry設定の変更を促すエラーになります。
 - DuckDBの実行は1回30秒、メモリ512MB、同時2本に制限。巨大な全世界検索・任意SQL・任意URL/パスはtoolへ公開しません。
 - 初回のDuckDB spatial / httpfs拡張取得と公開データ問い合わせにはネットワークが必要です。処理はローカルで実行し、AWSの認証情報は不要です。
+- 半径は最大25000m、polygonは最大2000座標。空間結合・版比較は各データセット最大5000候補で、超過時は範囲や条件を絞るエラーを返します。
+- 点以外の距離は局所投影による近似、円の面積・長さのクリップは128辺の近似です。GERSレジストリは現在版のみ、履歴版・非GERSのID取得にはboundsが必要です。
 - 公式STACのファイル収録範囲で問い合わせ先を絞り、メタデータを10分キャッシュします。初回は各タイプのファイル一覧を確認する時間がかかります。STAC取得失敗・上限超過は成功や空結果として扱いません。
 
 ## 利用条件・データ品質
@@ -107,5 +117,7 @@ uv build
 ローカルの合成Parquet fixtureによるSQL・geometry・ページング・集計検証とMCP接続試験を既定にします。公開データの問い合わせや実クライアント接続の結果は[validation](docs/validation.md)で別に記録します。
 
 公開データを実際に読む接続確認は`uv run python scripts/verify_managed.py`（管理コマンド経由のstdio・Places検索・稼働中削除の拒否）、`uv run python scripts/verify_live.py`（stdio・6テーマ）、`uv run python scripts/verify_http.py`（loopback HTTP・catalog）。既定のpytestには含まれません。
+
+`uv run python scripts/verify_complete.py`は全15タイプの公式列を全属性取得・条件付き件数・詳細取得と照合し、新しい空間検索・計測・結合・ID解決・版比較も公開データで確認します。地理データをディスクに保存しません。地域網羅率の調査とは別の機能検証です。
 
 設計・受入条件: [requirements](docs/requirements.md)。参考: [PlaceRoot](https://github.com/chuofringer/placeroot)、[Overture Maps MCP Server](https://github.com/srivinod1/overture-mcp-server)、[Soapbox MCP](https://github.com/soapboxbuild/overture-mcp)。これらの機能分割を参考にし、コードは複製していません。

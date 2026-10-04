@@ -101,3 +101,37 @@ def test_missing_shard_is_failure(monkeypatch):
     catalog._expires = float("inf")
     with pytest.raises(QueryError, match="MANIFEST_UNAVAILABLE"):
         catalog.files("2026-09-23.1", "places", "place")
+
+
+@pytest.mark.parametrize(
+    "xmax,valid",
+    [(180.00001525878906, True), (180.00022888183594, True), (180.1, False), (float("nan"), False)],
+)
+def test_world_edge_float32_extent(monkeypatch, xmax, valid):
+    release = "2026-09-23.1"
+    prefix = f"https://stac.overturemaps.org/{release}/base/bathymetry/"
+    asset = (
+        "https://overturemaps-us-west-2.s3.us-west-2.amazonaws.com/"
+        f"release/{release}/theme=base/type=bathymetry/part-00000.parquet"
+    )
+
+    def get(client, url):
+        if url.endswith("collection.json"):
+            data = {
+                "partition:file_count": 1,
+                "links": [{"rel": "item", "href": prefix + "00000/00000.json"}],
+            }
+        else:
+            data = {"bbox": [-180.0, -90.0, xmax, 90.0], "assets": {"aws": {"href": asset}}}
+        return httpx.Response(200, json=data, request=httpx.Request("GET", url))
+
+    monkeypatch.setattr(httpx.Client, "get", get)
+    catalog = Catalog()
+    catalog._releases, catalog._latest, catalog._expires = [release], release, float("inf")
+    bounds = Bounds(west=179.99, east=180, south=0, north=0.01)
+    if valid:
+        assert catalog.files(release, "base", "bathymetry", bounds) == [asset]
+        assert next(iter(catalog._items.values()))[0][0] == [-180.0, -90.0, 180.0, 90.0]
+    else:
+        with pytest.raises(QueryError, match="MANIFEST_UNAVAILABLE"):
+            catalog.files(release, "base", "bathymetry", bounds)

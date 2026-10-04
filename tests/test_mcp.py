@@ -18,7 +18,7 @@ async def test_mcp_contract_and_search_detail(
     monkeypatch.setattr(server, "service", fixture_service)
     async with Client(server.mcp) as client:
         tools = (await client.list_tools()).tools
-        assert len(tools) == 5
+        assert len(tools) == 9
         schemas = {tool.name: tool.output_schema for tool in tools}
         for tool in tools:
             assert tool.annotations is not None

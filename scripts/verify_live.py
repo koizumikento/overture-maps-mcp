@@ -24,7 +24,7 @@ async def main() -> None:
             flush=True,
         )
         tools = (await client.list_tools()).tools
-        assert len(tools) == 5
+        assert len(tools) == 9
         catalog = await client.call_tool("overture_catalog", {})
         assert not catalog.is_error and catalog.structured_content is not None
         release = catalog.structured_content["release"]

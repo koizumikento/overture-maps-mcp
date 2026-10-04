@@ -78,8 +78,17 @@ def fixture_service(tmp_path: Path) -> Iterator[Service]:
             paths[f"theme={theme}/type={feature_type}"] = str(file)
 
     def local_query(sql: str, parameters: list[Any]) -> list[dict[str, Any]]:
-        path = next(value for key, value in paths.items() if key in parameters[0][0])
-        result = conn.execute(sql, [path, *parameters[1:]])
+        def substitute(value):
+            if isinstance(value, list):
+                return [substitute(item) for item in value]
+            if isinstance(value, str):
+                return next(
+                    (path for key, path in paths.items() if value == key or key + "/" in value),
+                    value,
+                )
+            return value
+
+        result = conn.execute(sql, [substitute(value) for value in parameters])
         names = [col[0] for col in result.description]
         return [dict(zip(names, row, strict=True)) for row in result.fetchall()]
 

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import base64
 import hashlib
 import json
 import threading
@@ -9,7 +8,6 @@ from contextlib import contextmanager
 from datetime import date, datetime
 from decimal import Decimal
 from typing import Any
-from uuid import UUID
 
 import duckdb
 
@@ -87,7 +85,9 @@ def bounded(data: dict[str, Any]) -> dict[str, Any]:
     except ValueError as exc:
         raise QueryError("UNSUPPORTED_VALUE: dataset contains a non-finite numeric value.") from exc
     if len(serialized.encode()) > MAX_RESPONSE_BYTES:
-        raise QueryError("RESULT_TOO_LARGE: lower limit, narrow the area, or omit geometry.")
+        raise QueryError(
+            "RESULT_TOO_LARGE: lower limit, select fewer fields, narrow area, or omit geometry."
+        )
     return json.loads(serialized)
 
 
@@ -112,22 +112,3 @@ def bbox_filter(bounds: Bounds) -> tuple[str, list[Any]]:
 def cursor_key(release: str, theme: str, feature_type: str, scope: dict[str, Any]) -> str:
     raw = json.dumps([release, theme, feature_type, scope], sort_keys=True).encode()
     return hashlib.sha256(raw).hexdigest()
-
-
-def encode_cursor(identifier: str, key: str) -> str:
-    return base64.urlsafe_b64encode(json.dumps([identifier, key]).encode()).decode()
-
-
-def decode_cursor(cursor: str, key: str) -> str:
-    try:
-        if len(cursor) > 1024:
-            raise ValueError
-        payload = json.loads(base64.b64decode(cursor, altchars=b"-_", validate=True))
-        if not isinstance(payload, list) or len(payload) != 2 or payload[1] != key:
-            raise ValueError
-        return str(UUID(payload[0]))
-    except (ValueError, TypeError, AttributeError) as exc:
-        raise QueryError(
-            "INVALID_CURSOR: reuse the cursor with the same release, bounds and filters; "
-            "restart without a cursor if any change."
-        ) from exc

@@ -99,13 +99,22 @@ class Catalog:
                         not isinstance(extent, list)
                         or len(extent) != 4
                         or any(not isinstance(v, int | float) for v in extent)
-                        or not -180 <= extent[0] <= extent[2] <= 180
-                        or not -90 <= extent[1] <= extent[3] <= 90
+                        # Official float32/raster extents slightly overshoot world
+                        # edges (bathymetry and land_cover). Clamp only metadata;
+                        # user coordinates and feature geometries stay unchanged.
+                        or not -180.001 <= extent[0] <= extent[2] <= 180.001
+                        or not -90.001 <= extent[1] <= extent[3] <= 90.001
                         or not re.fullmatch(
                             re.escape(asset_prefix) + r"part-[\w.-]+\.parquet", href
                         )
                     ):
                         raise ValueError("invalid shard extent or asset")
+                    extent = [
+                        max(-180.0, extent[0]),
+                        max(-90.0, extent[1]),
+                        min(180.0, extent[2]),
+                        min(90.0, extent[3]),
+                    ]
                     return extent, href
 
                 if bounds is None:

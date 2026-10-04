@@ -28,7 +28,7 @@ jobs:
       - run: uv run pytest
       - run: uv build
       - name: Clean wheel registration
-        run: uv run --isolated --no-project --with dist/overture_maps_mcp-0.1.1-py3-none-any.whl python -c "import asyncio; from overture_maps_mcp.server import mcp; assert len(asyncio.run(mcp.list_tools())) == 5"
+        run: uv run --isolated --no-project --no-cache --with dist/overture_maps_mcp-0.2.0-py3-none-any.whl python -c "import asyncio; from overture_maps_mcp.server import mcp; assert len(asyncio.run(mcp.list_tools())) == 9"
       - name: Dependency-free cleanup
         run: |
           uv run --isolated --no-project --no-cache --python 3.12 python -B manage.py clean

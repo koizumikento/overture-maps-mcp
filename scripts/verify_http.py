@@ -41,15 +41,29 @@ async def main() -> None:
             else:
                 raise RuntimeError("HTTP server did not start")
         async with Client(url) as client:
-            assert len((await client.list_tools()).tools) == 5
+            assert len((await client.list_tools()).tools) == 9
             result = await client.call_tool("overture_catalog", {})
             assert not result.is_error and result.structured_content is not None
+            nearest = await client.call_tool(
+                "overture_nearest",
+                {
+                    "theme": "places",
+                    "feature_type": "place",
+                    "release": result.structured_content["release"],
+                    "center": {"longitude": 139.761, "latitude": 35.681},
+                    "radius_m": 200,
+                    "limit": 1,
+                },
+            )
+            assert not nearest.is_error and nearest.structured_content is not None
+            assert nearest.structured_content["data"]["returned"] == 1
             print(
                 json.dumps(
                     {
                         "transport": "streamable-http",
                         "protocol": client.protocol_version,
-                        "tools": 5,
+                        "tools": 9,
+                        "nearest_returned": 1,
                         "release": result.structured_content["release"],
                     }
                 )
