@@ -10,7 +10,7 @@
 - `OAI-Sites-Authorization`のservice accessはユーザーidentityを作らない。本adapterはuser IDのないサービス呼出しを拒否する。別の公開Workerへこのコードを直接配備しない（identity headerを偽造できる）。
 - Workerの`/mcp`入口はOrigin欠如を許可し、Originが存在する場合はSiteのrequest URLのoriginとの完全一致を要求する。foreign/opaque/malformed Originはbackend接続前に403。backendのOrigin検証とは別の境界である。
 - backend tokenはWorkerのservice authorityだけを示す。ユーザーOAuth token/identity/cookie/Originをbackendへ転送しない。backendはtoken照合後にだけSDKへ渡す。OAuth resource serverを別途実装しない。
-- URLはruntime設定の固定HTTPS `/mcp`だけ。redirectは拒否。toolsにSQL/URL/path/shell/管理操作を追加しない。既存の9 tools、schemas、annotations、errors、paging、全6テーマ、limits、provenance/licenseは既存Python SDKとClientが所有し、JSに再実装しない。
+- URLはruntime設定の固定HTTPS `/mcp`だけ。Worker fetchは`redirect: "manual"`で追従を止め、200/400/202/204以外（3xxを含む）は502で拒否する。redirect先へservice tokenを送らない。toolsにSQL/URL/path/shell/管理操作を追加しない。既存の9 tools、schemas、annotations、errors、paging、全6テーマ、limits、provenance/licenseは既存Python SDKとClientが所有し、JSに再実装しない。
 - Python SDKはlock済み`mcp==2.3.0`。legacy `2025-11-25` initialize/discovery/callsは`stateless_http=True, json_response=True`、modern `2026-07-28`はSDKのper-request envelope/discoveryを使用。セッション/SSE/back-channelは不要。WorkerはMCP-Protocol-Version、Mcp-Method、Mcp-Name、Mcp-Param-*とJSON bodyを保持する。
 - request上限256KiB、response上限2MiB（既存400KB data＋互換text＋schemasを収容）、upstream HTTP timeout 120秒。既存DuckDB 30秒/クエリ、512MB、同時2本、50件/page等は変更しない。timeout/過大応答/接続障害は502で、空成功にしない。結果は`Cache-Control: no-store`。
 

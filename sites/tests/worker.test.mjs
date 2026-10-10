@@ -52,7 +52,7 @@ test("fixed endpoint, protocol headers and bytes survive; visitor credentials do
     assert.equal(options.headers.get("Mcp-Name"), "overture_catalog");
     assert.equal(options.headers.get("Mcp-Param-test"), "value");
     for (const header of ["Cookie", "Origin", "OAI-Sites-Authorization", "oai-authenticated-user-id", "Mcp-Session-Id"]) assert.equal(options.headers.get(header), null);
-    assert.equal(options.redirect, "error");
+    assert.equal(options.redirect, "manual");
     assert.equal(new TextDecoder().decode(options.body), body);
     return new Response('{"jsonrpc":"2.0","id":1,"result":{"tools":[]}}', { headers: { "Content-Type": "application/json", "Set-Cookie": "secret" } });
   };
@@ -62,12 +62,40 @@ test("fixed endpoint, protocol headers and bytes survive; visitor credentials do
   assert.equal(response.headers.get("Cache-Control"), "no-store");
 });
 
-test("notifications, transport errors, redirects and size limits", async () => {
+test("manual redirects are rejected without following or exposing the upstream response", async () => {
+  for (const status of [301, 302, 303, 307, 308]) {
+    let calls = 0;
+    let cancelled = false;
+    globalThis.fetch = async (url, options) => {
+      // Sites edge rejects redirect:error before connecting to the backend.
+      assert.equal(options.redirect, "manual");
+      assert.equal(url.href, env.OVERTURE_BACKEND_URL);
+      calls++;
+      return new Response(new ReadableStream({
+        start(controller) { controller.enqueue(new TextEncoder().encode("private redirect body")); },
+        cancel() { cancelled = true; },
+      }), { status, headers: { Location: "https://evil.test", "Content-Type": "application/json" } });
+    };
+    const result = await worker.fetch(request(), env);
+    assert.equal(result.status, 502);
+    assert.equal(calls, 1);
+    assert.equal(cancelled, true);
+    assert.equal(result.headers.get("Location"), null);
+    assert.equal(result.headers.get("Cache-Control"), "no-store");
+    assert(!(await result.text()).includes("private redirect body"));
+  }
+});
+
+test("notifications, transport errors and size limits", async () => {
+  globalThis.fetch = async () => Response.json({ jsonrpc: "2.0", id: 1, error: { code: -32600, message: "Invalid Request" } }, { status: 400 });
+  const invalid = await worker.fetch(request(), env);
+  assert.equal(invalid.status, 400);
+  assert.equal((await invalid.json()).error.code, -32600);
   for (const status of [202, 204]) {
     globalThis.fetch = async () => new Response(null, { status });
     assert.equal((await worker.fetch(request(), env)).status, status);
   }
-  for (const response of [new Response("private traceback", { status: 500 }), new Response('{"secret":"private traceback"}', { status: 500, headers: { "Content-Type": "application/json" } }), new Response(null, { status: 302, headers: { Location: "https://evil.test" } }), new Response("x".repeat(2 * 1024 * 1024 + 1), { headers: { "Content-Type": "application/json" } })]) {
+  for (const response of [new Response("private traceback", { status: 500 }), new Response('{"secret":"private traceback"}', { status: 500, headers: { "Content-Type": "application/json" } }), new Response("x".repeat(2 * 1024 * 1024 + 1), { headers: { "Content-Type": "application/json" } })]) {
     globalThis.fetch = async () => response;
     const result = await worker.fetch(request(), env);
     assert.equal(result.status, 502);

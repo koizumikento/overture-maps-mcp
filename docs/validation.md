@@ -130,3 +130,9 @@ Ruff check/format、ty、pytest 107件、Node Worker 3 tests、Worker ESM build�
 ### 親レビューのOrigin修正（2026-10-10追補）
 
 上記は`4693eaf`時点の検証。親チャットのレビューで、WorkerがOriginをbackendへ転送しないことはSite入口でforeign Originを拒否する代わりにはならないと確認した。`/mcp`でOriginが存在する場合にSite request URLのoriginと完全一致させ、不一致はbackend fetch前に403で拒否する最小修正を追加。Node Worker 4 testsが合格し、missing/same Originの成功、別host・scheme・port・opaque `null`・空Originの拒否、拒否時のbackend呼出しなしを確認。Worker ESM buildも合格。Python/backendの既存契約に変更はない。生成した`sites/dist`の2 fileと空directoryを削除し、`.runtime`/root `dist`/archiveも存在しないこととテストプロセスの残存なしを確認。CIは修正後SHAのPR checksを参照する。
+
+### Sites fetchのredirect互換修正（2026-10-10追補）
+
+親チャットのowner-private一時Siteでmodern discoveryが502となり、同じbackendへの認証済みHTTPS requestは200だった。親が取得したedge診断は、Workerの`redirect: "error"`が接続前にTypeErrorとなり、対応値がfollow/manualであることを示した。Worker fetchを`manual`へ変更し、既存200/400/202/204のallowlistで3xxを502にする。backend・token・認可の契約は変更していない。
+
+Node Worker 5 testsでmanual指定、301/302/303/307/308の単一fetch・body破棄・Location/本文の非露出、200/400/202/204の保持を確認した。実SDK wire fixtureのrelayにもmanualのassertを追加。Ruff check/format、ty、pytest 107件、Worker/Python buildと隔離core/MCP wheelの9操作登録は合格。修正後の実Sites discovery/catalogの受入は親チャットが別途行い、このローカル回帰をedge実測とは扱わない。live検証用の専用backend/tunnel/runtimeは親の停止指示まで保持する。
