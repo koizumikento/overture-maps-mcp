@@ -8,6 +8,7 @@ for (const fixture of fixtures) {
   const bytes = JSON.stringify(fixture.response);
   globalThis.fetch = async (url, options) => {
     assert.equal(url.href, env.OVERTURE_BACKEND_URL);
+    assert.equal(options.redirect, "manual");
     assert.deepEqual(JSON.parse(new TextDecoder().decode(options.body)), fixture.request);
     return new Response(bytes, { headers: { "Content-Type": "application/json" } });
   };

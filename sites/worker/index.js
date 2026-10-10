@@ -78,7 +78,7 @@ export default {
     }
     try {
       const upstream = await fetch(backend, {
-        method: "POST", headers, body, redirect: "error", signal: AbortSignal.timeout(120000),
+        method: "POST", headers, body, redirect: "manual", signal: AbortSignal.timeout(120000),
       });
       if (upstream.status === 202 || upstream.status === 204) {
         await upstream.body?.cancel();
