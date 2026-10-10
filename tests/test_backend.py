@@ -12,6 +12,7 @@ import httpx2
 import pytest
 from mcp import Client
 from mcp.client.streamable_http import streamable_http_client
+from mcp.types import DiscoverResult, Implementation
 from starlette.testclient import TestClient
 
 from overture_maps_mcp import server
@@ -155,10 +156,28 @@ def test_backend_and_worker_contract(analysis_service, monkeypatch, tmp_path):
                 modern_headers["Mcp-Name"] = "overture_catalog"
             response = client.post("/mcp", json=body, headers=modern_headers)
             assert response.status_code == 200, response.text
-            assert "result" in response.json() and "mcp-session-id" not in response.headers
-            captures.append(
-                {"request": body, "response": response.json(), "protocol": "2026-07-28"}
+            envelope = response.json()
+            assert envelope["jsonrpc"] == "2.0" and envelope["id"] == body["id"]
+            assert "error" not in envelope, envelope
+            result = envelope["result"]
+            assert result["resultType"] == "complete"
+            identity = Implementation.model_validate(
+                result["_meta"]["io.modelcontextprotocol/serverInfo"]
             )
+            assert identity.name == "overture-maps-mcp"
+            assert isinstance(identity.version, str)
+            if method == "server/discover":
+                discovery = DiscoverResult.model_validate(result)
+                assert result["supportedVersions"] == discovery.supported_versions == ["2026-07-28"]
+                assert isinstance(result["capabilities"]["tools"], dict)
+                assert discovery.capabilities.tools is not None
+                assert result["ttlMs"] == 0 and result["cacheScope"] == "private"
+            elif method == "tools/list":
+                assert {tool["name"] for tool in result["tools"]} == set(cases)
+            else:
+                assert not result["isError"] and result["structuredContent"]["data"]["themes"]
+            assert "mcp-session-id" not in response.headers
+            captures.append({"request": body, "response": envelope, "protocol": "2026-07-28"})
         for name, args in cases.items():
             result = rpc("tools/call", {"name": name, "arguments": args})
             assert not result.get("isError", False), result
