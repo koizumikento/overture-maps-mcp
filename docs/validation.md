@@ -116,3 +116,17 @@ scripts/verify_library_cli.pyはMCPなしの隔離core wheelでexit 0。公開20
 管理起動のstdioはprotocol 2026-07-28、catalog・公開Places検索1件、稼働中clean拒否を確認してexit 0。loopback Streamable HTTPも同protocol・9 tool・catalog・公開近傍1件・追加引数拒否でexit 0。0.2.0での全15タイプ検証は前節の記録であり、0.3.0で全タイプを再実測したとは扱わない。今回の変更は同じServiceを公開APIで包む構造で、既存15タイプ・分析SQLのローカル回帰検証を維持した。
 
 CIは当該SHAのActions結果で区別する。PyPI公開、公開HTTP配信、ユーザーの常用環境へのCLIインストール・Codex設定変更は行わず、検証は専用/隔離環境で実施した。
+
+## Sites adapter / authenticated backend（2026-10-10）
+
+Ruff check/format、ty、pytest 107件、Node Worker 3 tests、Worker ESM build、隔離tar artifact、core wheel（MCPなし）の実CLI/cleanupとoptional MCP wheelの9 tools/backend登録が合格。fixtureは既存synthetic Parquetで、9操作のAPI/ASGI結果・schema、6テーマ、paging、provenance/license、禁止SQL/URL・limits・invalid cursorの失敗を保持した。SDK 2.3.0のlegacy 2025-11-25とmodern 2026-07-28のwireをWorkerへ通し、JSON bytesの保持を確認。loopback CLI子プロセスへの公式SDK接続はmodern/legacyとも9 tools・禁止引数拒否が合格し、finallyで停止を確認した。
+
+レビューではsecret文字制約のPython/JS不一致、artifactへの古いfile混入、modern Mcp-Name headerの欠落を修正し、対象5 Python tests・3 Node testsとRuff/ty/buildを再実行して合格。最終差分の認証境界・固定URL/redirect・secret非転送・SDK再利用・管理保存先・artifact・手順を再確認し、確認できたactionable findingは残っていない。独立した外部レビューを受けたという意味ではない。
+
+専用worktree `C:/workspace/worktrees/overture-maps-mcp-sites-mcp-support` の`.runtime`（依存・cache・DuckDB拡張・bytecode・fixture・隔離package）、root `dist`（wheel/sdist）、`src/overture_maps_mcp/__pycache__`を`manage.py clean`で削除。`sites/dist`の実file 2件と空directoryを確認して削除し、残存なしを確認。管理用`.runtime.lock`（1 byte）とsource/worktree/branchはレビュー・再現用に保持。作業専用Python/Node/tunnelプロセスの残存はなし。元checkout `C:/workspace/overture-maps-mcp`は変更していない。共有cacheと既存登録は変更していない。
+
+公開データ/live Sites/tunnel配備・authenticated remote discovery・実ChatGPT/Codex plugin callは未実施。Site/account/plugin/DBの検証資源は作成していない。DuckDB backendの常時稼働ホストと固定HTTPS tunnel/proxy、runtime secrets設定が配備前提。CIはこのPRのfinal SHAのActions結果を参照し、ローカル検証と区別する。契約・再現手順は[sites](sites.md)。
+
+### 親レビューのOrigin修正（2026-10-10追補）
+
+上記は`4693eaf`時点の検証。親チャットのレビューで、WorkerがOriginをbackendへ転送しないことはSite入口でforeign Originを拒否する代わりにはならないと確認した。`/mcp`でOriginが存在する場合にSite request URLのoriginと完全一致させ、不一致はbackend fetch前に403で拒否する最小修正を追加。Node Worker 4 testsが合格し、missing/same Originの成功、別host・scheme・port・opaque `null`・空Originの拒否、拒否時のbackend呼出しなしを確認。Worker ESM buildも合格。Python/backendの既存契約に変更はない。生成した`sites/dist`の2 fileと空directoryを削除し、`.runtime`/root `dist`/archiveも存在しないこととテストプロセスの残存なしを確認。CIは修正後SHAのPR checksを参照する。

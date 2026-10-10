@@ -13,6 +13,9 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version-file: .python-version
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
       - name: Prepare managed development environment
         run: |
           uv run --isolated --no-project --no-cache --python 3.12 python -B manage.py setup --dev
@@ -27,6 +30,8 @@ jobs:
       - run: uv run ruff format --check .
       - run: uv run ty check .
       - run: uv run pytest
+      - run: node --test sites/tests/worker.test.mjs
+      - run: node sites/scripts/build.mjs
       - run: uv build
       - name: Core wheel without MCP dependencies
         run: uv run --isolated --no-project --no-cache --with dist/overture_maps_mcp-0.3.0-py3-none-any.whl python scripts/verify_distribution.py

@@ -9,3 +9,7 @@ dist/
 .cache/
 .runtime/
 .runtime.lock
+sites/dist/
+sites/site.tar.gz
+sites/.env.*
+!sites/.env.example

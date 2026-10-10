@@ -56,7 +56,11 @@ stdioが既定です。ローカルMCPクライアントからの設定例:
 }
 ```
 
-Streamable HTTPは`.\manage.ps1 run -Transport streamable-http`、接続先は`http://127.0.0.1:8000/mcp`です。`-Port`でポートを変更できます。ローカルホストへbindし、認証や公開配信は本実装に含みません。公開時の条件は[SDKの実行ドキュメント](https://py.sdk.modelcontextprotocol.io/run/deploy/)を参照。
+Streamable HTTPは`.\manage.ps1 run -Transport streamable-http`、接続先は`http://127.0.0.1:8000/mcp`です。`-Port`でポートを変更できます。通常のHTTP起動はloopback専用・認証なしです。
+
+Sites向けには[認証backend＋Worker adapterの手順](docs/sites.md)を用意しています。DuckDBは別Pythonホストで実行し、`-SitesBackend`でサービス認証付きのstateless HTTPを起動します。Sites OAuthとユーザー認可はWorker側で扱います。Python API・CLI・stdioの9操作は共通で、Sites単体では実行しません。
+
+Workerの`/mcp`ではOrigin欠如・同一Site originを許可し、foreign Originはbackend接続前に403で拒否します。Node testsでこの入口境界を検証し、backend SDKのOrigin検証と区別しています。
 
 ## PCの保存容量と削除
 
@@ -143,6 +147,8 @@ uv run ruff check .
 uv run ruff format --check .
 uv run ty check .
 uv run pytest
+node --test sites/tests/worker.test.mjs
+node sites/scripts/build.mjs
 uv build
 ```
 
