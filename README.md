@@ -60,6 +60,8 @@ Streamable HTTPは`.\manage.ps1 run -Transport streamable-http`、接続先は`h
 
 Sites向けには[認証backend＋Worker adapterの手順](docs/sites.md)を用意しています。DuckDBは別Pythonホストで実行し、`-SitesBackend`でサービス認証付きのstateless HTTPを起動します。Sites OAuthとユーザー認可はWorker側で扱います。Python API・CLI・stdioの9操作は共通で、Sites単体では実行しません。
 
+Workerの`/mcp`ではOrigin欠如・同一Site originを許可し、foreign Originはbackend接続前に403で拒否します。Node testsでこの入口境界を検証し、backend SDKのOrigin検証と区別しています。
+
 ## PCの保存容量と削除
 
 管理コマンド経由の起動では、Python依存・uvキャッシュ・DuckDB拡張・Python bytecodeをリポジトリ内の`.runtime`へ集約します。地理データの永続DBやディスクキャッシュは作りません。起動時に現在の保存容量をstderrへ表示します。

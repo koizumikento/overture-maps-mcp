@@ -25,6 +25,24 @@ test("identity and configuration deny before contacting backend", async () => {
   assert.equal(identity.headers.get("Cache-Control"), "no-store");
 });
 
+test("MCP ingress permits missing or same Origin and rejects foreign Origin before fetch", async () => {
+  let calls = 0;
+  globalThis.fetch = async () => {
+    calls++;
+    return Response.json({ jsonrpc: "2.0", id: 1, result: { tools: [] } });
+  };
+  for (const headers of [{}, { Origin: "https://site.example" }]) {
+    assert.equal((await worker.fetch(request(headers), env)).status, 200);
+  }
+  assert.equal(calls, 2);
+  for (const origin of ["https://foreign.example", "https://site.example.evil", "http://site.example", "https://site.example:444", "null", ""]) {
+    const response = await worker.fetch(request({ Origin: origin }), env);
+    assert.equal(response.status, 403);
+    assert.equal(response.headers.get("Cache-Control"), "no-store");
+    assert.equal(calls, 2);
+  }
+});
+
 test("fixed endpoint, protocol headers and bytes survive; visitor credentials do not", async () => {
   globalThis.fetch = async (url, options) => {
     assert.equal(url.href, env.OVERTURE_BACKEND_URL);

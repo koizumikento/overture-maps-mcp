@@ -32,7 +32,8 @@ function failure(status, message) {
 
 export default {
   async fetch(request, env) {
-    const path = new URL(request.url).pathname;
+    const siteURL = new URL(request.url);
+    const path = siteURL.pathname;
     if (path === "/identity" && request.method === "GET") {
       const id = request.headers.get("oai-authenticated-user-id");
       return id ? Response.json({ id }, { headers: { "Cache-Control": "no-store" } }) : failure(401, "Sign in to the Site");
@@ -44,6 +45,8 @@ export default {
     if (!user) return failure(401, "Sign in to the Site");
     if (!env.OVERTURE_ALLOWED_USER_ID) return failure(503, "Configure Site access");
     if (user !== env.OVERTURE_ALLOWED_USER_ID) return failure(403, "Site access denied");
+    const origin = request.headers.get("Origin");
+    if (origin !== null && origin !== siteURL.origin) return failure(403, "Origin not allowed");
     let backend;
     try {
       backend = new URL(env.OVERTURE_BACKEND_URL);

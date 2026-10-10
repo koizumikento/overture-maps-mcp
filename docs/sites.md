@@ -8,6 +8,7 @@
 
 - SitesはOAuthを所有する。Workerはdispatchが設定した`oai-authenticated-user-id`を`OVERTURE_ALLOWED_USER_ID`と照合し、identityなしは401、別userは403。Site内で安定したIDを指定し、emailは認可に使わない。owner-privateを既定とし、既存Siteのidentity・audienceを維持する。
 - `OAI-Sites-Authorization`のservice accessはユーザーidentityを作らない。本adapterはuser IDのないサービス呼出しを拒否する。別の公開Workerへこのコードを直接配備しない（identity headerを偽造できる）。
+- Workerの`/mcp`入口はOrigin欠如を許可し、Originが存在する場合はSiteのrequest URLのoriginとの完全一致を要求する。foreign/opaque/malformed Originはbackend接続前に403。backendのOrigin検証とは別の境界である。
 - backend tokenはWorkerのservice authorityだけを示す。ユーザーOAuth token/identity/cookie/Originをbackendへ転送しない。backendはtoken照合後にだけSDKへ渡す。OAuth resource serverを別途実装しない。
 - URLはruntime設定の固定HTTPS `/mcp`だけ。redirectは拒否。toolsにSQL/URL/path/shell/管理操作を追加しない。既存の9 tools、schemas、annotations、errors、paging、全6テーマ、limits、provenance/licenseは既存Python SDKとClientが所有し、JSに再実装しない。
 - Python SDKはlock済み`mcp==2.3.0`。legacy `2025-11-25` initialize/discovery/callsは`stateless_http=True, json_response=True`、modern `2026-07-28`はSDKのper-request envelope/discoveryを使用。セッション/SSE/back-channelは不要。WorkerはMCP-Protocol-Version、Mcp-Method、Mcp-Name、Mcp-Param-*とJSON bodyを保持する。
@@ -63,7 +64,7 @@ secret値をsource/manifest/browser/model promptへ出さない。backendとSite
 
 ## 検証・受入
 
-`uv run pytest`は既存synthetic Parquet fixtureでAPIとauthenticated ASGI backendの9操作/6テーマ/paging/error/出典を照合する。legacy initializeとmodern server/discover/tools/list/tools/callを含むSDK wireをNode Workerへ渡し、JSONの完全保持を確認する。auth/Host/Origin/body限界、固定URL/redirect/identity/secret転送遮断とupstream障害を確認。隔離manifestでtar artifactと古いfileの混入拒否も検査する。実loopback CLI子プロセスへ公式SDKのmodern/legacy登録と禁止引数を確認し、finallyで停止する。`node --test sites/tests/worker.test.mjs`とbuildをCIに追加。
+`uv run pytest`は既存synthetic Parquet fixtureでAPIとauthenticated ASGI backendの9操作/6テーマ/paging/error/出典を照合する。legacy initializeとmodern server/discover/tools/list/tools/callを含むSDK wireをNode Workerへ渡し、JSONの完全保持を確認する。backendのauth/Host/Origin/body限界と、Worker入口のmissing/same Origin成功・foreign Originのfetch前403を別々に検証する。固定URL/redirect/identity/secret転送遮断とupstream障害を確認。隔離manifestでtar artifactと古いfileの混入拒否も検査する。実loopback CLI子プロセスへ公式SDKのmodern/legacy登録と禁止引数を確認し、finallyで停止する。`node --test sites/tests/worker.test.mjs`とbuildをCIに追加。
 
 ローカル/mock/isolated fixture、CI、live Sites deployment、authenticated discovery、実client callは別証拠。本PRではlive Sites/tunnelの互換性・実データ応答時間・user IDの配備設定は未受入。合成データの合格を実施設網羅率や営業状態の保証にしない。元のRO-01〜06評価契約は維持し、AI agent評価の実施を主張しない。
 

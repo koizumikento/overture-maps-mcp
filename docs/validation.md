@@ -126,3 +126,7 @@ Ruff check/format、ty、pytest 107件、Node Worker 3 tests、Worker ESM build�
 専用worktree `C:/workspace/worktrees/overture-maps-mcp-sites-mcp-support` の`.runtime`（依存・cache・DuckDB拡張・bytecode・fixture・隔離package）、root `dist`（wheel/sdist）、`src/overture_maps_mcp/__pycache__`を`manage.py clean`で削除。`sites/dist`の実file 2件と空directoryを確認して削除し、残存なしを確認。管理用`.runtime.lock`（1 byte）とsource/worktree/branchはレビュー・再現用に保持。作業専用Python/Node/tunnelプロセスの残存はなし。元checkout `C:/workspace/overture-maps-mcp`は変更していない。共有cacheと既存登録は変更していない。
 
 公開データ/live Sites/tunnel配備・authenticated remote discovery・実ChatGPT/Codex plugin callは未実施。Site/account/plugin/DBの検証資源は作成していない。DuckDB backendの常時稼働ホストと固定HTTPS tunnel/proxy、runtime secrets設定が配備前提。CIはこのPRのfinal SHAのActions結果を参照し、ローカル検証と区別する。契約・再現手順は[sites](sites.md)。
+
+### 親レビューのOrigin修正（2026-10-10追補）
+
+上記は`4693eaf`時点の検証。親チャットのレビューで、WorkerがOriginをbackendへ転送しないことはSite入口でforeign Originを拒否する代わりにはならないと確認した。`/mcp`でOriginが存在する場合にSite request URLのoriginと完全一致させ、不一致はbackend fetch前に403で拒否する最小修正を追加。Node Worker 4 testsが合格し、missing/same Originの成功、別host・scheme・port・opaque `null`・空Originの拒否、拒否時のbackend呼出しなしを確認。Worker ESM buildも合格。Python/backendの既存契約に変更はない。生成した`sites/dist`の2 fileと空directoryを削除し、`.runtime`/root `dist`/archiveも存在しないこととテストプロセスの残存なしを確認。CIは修正後SHAのPR checksを参照する。
