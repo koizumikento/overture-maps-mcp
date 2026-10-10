@@ -28,6 +28,7 @@ def main() -> int:
     run = actions.add_parser("run", help="Start the MCP with dedicated venv/cache/extensions")
     run.add_argument("--transport", choices=("stdio", "streamable-http"), default="stdio")
     run.add_argument("--port", type=int, default=8000)
+    run.add_argument("--sites-backend", action="store_true")
     cli = actions.add_parser("cli", help="Run geographic CLI using dedicated core dependencies")
     cli.add_argument("arguments", nargs=argparse.REMAINDER)
     argv = sys.argv[1:]
@@ -81,6 +82,7 @@ def main() -> int:
                         args.transport,
                         "--port",
                         str(args.port),
+                        *(["--sites-backend"] if args.sites_backend else []),
                     ]
                 return subprocess.call(command, cwd=PROJECT, env=env)
         return 0

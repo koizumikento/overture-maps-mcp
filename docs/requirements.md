@@ -12,7 +12,7 @@
 
 検索と詳細・集計は同じ明示releaseを使う。IDはOverture地物の識別子で、GERS対象外の型やID変化を表示する。独自法人情報・統計・不動産データとの関連付けは呼び出し元の責務。名称のみの一致を同一対象の証明にしない。
 
-list-heavy toolのページ上限50、bounded area、opaque cursor、型付きoutputSchema、structuredContentとテキスト互換表現を確認する。トランスポートはstdioとローカルStreamable HTTP。認証付き公開運用は別途設計する。
+list-heavy toolのページ上限50、bounded area、opaque cursor、型付きoutputSchema、structuredContentとテキスト互換表現を確認する。トランスポートはstdioとローカルStreamable HTTP。Sites向けの認証backendとWorker契約は[sites](sites.md)。実配備・実クライアント接続は別受入とする。
 
 ## 保存容量の管理（2026-10-04追加）
 

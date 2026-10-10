@@ -7,6 +7,7 @@ param(
     [ValidateSet('stdio', 'streamable-http')]
     [string]$Transport = 'stdio',
     [int]$Port = 8000,
+    [switch]$SitesBackend,
     [Parameter(ValueFromRemainingArguments = $true)]
     [string[]]$CliArguments
 )
@@ -16,6 +17,7 @@ $taskArguments = @('run', '--isolated', '--no-project', '--no-cache', '--python'
 if ($Action -eq 'setup' -and $Dev) { $taskArguments += '--dev' }
 if ($Action -eq 'clean' -and $LegacyOnly) { $taskArguments += '--legacy-only' }
 if ($Action -eq 'run') { $taskArguments += @('--transport', $Transport, '--port', "$Port") }
+if ($Action -eq 'run' -and $SitesBackend) { $taskArguments += '--sites-backend' }
 if ($Action -eq 'cli') { $taskArguments += $CliArguments }
 & uv @taskArguments
 exit $LASTEXITCODE
