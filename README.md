@@ -62,6 +62,12 @@ Sites向けには[認証backend＋Worker adapterの手順](docs/sites.md)を用�
 
 Workerの`/mcp`ではOrigin欠如・同一Site originを許可し、foreign Originはbackend接続前に403で拒否します。Node testsでこの入口境界を検証し、backend SDKのOrigin検証と区別しています。
 
+## TLS証明書と実行環境の更新
+
+HTTPXによる外向きのcatalog/STAC取得はcertifiのCAバンドルを使用します。[emSignのルート証明書削除に関する勧告](https://github.com/certifi/python-certifi/security/advisories/GHSA-6q48-6c7w-9gw2)への対応として、依存条件を`certifi>=2026.10.19`とし、`uv.lock`も更新しています。管理起動は`uv sync/run --frozen`を使うため、更新したcheckoutでMCPを停止してから`./manage.ps1 setup`（非Windows: `uv run --isolated --no-project --no-cache --python 3.12 python -B manage.py setup`）を実行し、再起動してください。開発環境では`setup -Dev`／`setup --dev`を使います。別環境へwheelやローカルパスから導入した場合も、その環境のパッケージを更新してください。
+
+この依存更新はPython本体、pip/uvが内蔵するCA、OSの信頼ストア、DuckDBの通信経路を更新しません。[Python公式の案内](https://blog.python.org/2026/10/python-3151-3149-31317/)も参照し、利用するPython配布元・インストーラー、pip、uv、OSのCA更新を別途確認してください。既存の仮想環境も対象です。TLS検証を無効化して回避しないでください。
+
 ## PCの保存容量と削除
 
 管理コマンド経由の起動では、Python依存・uvキャッシュ・DuckDB拡張・Python bytecodeをリポジトリ内の`.runtime`へ集約します。地理データの永続DBやディスクキャッシュは作りません。起動時に現在の保存容量をstderrへ表示します。
