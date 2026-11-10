@@ -31,7 +31,19 @@ print(client.storage_dir)
 
 Python、CLI、MCPで同じ9種類の操作を使えます。引数の型と検証ルールは共通です。結果と出典の形式、JSONファイルや標準入力からの指定方法、エラー、保存先は[ライブラリ・CLIガイド](docs/library-cli.md)を参照してください。
 
-リポジトリから依存を専用保存先へ集めてCLIを使う場合は`./manage.ps1 cli search --theme places --type place --bounds 139.760 35.680 139.762 35.682 --limit 2`。Windows以外は`uv run --isolated --no-project --no-cache --python 3.12 python -B manage.py cli search ...`。
+依存関係を専用の保存先にまとめてCLIを使うには、リポジトリで次のコマンドを実行します。
+
+Windows:
+
+```powershell
+./manage.ps1 cli search --theme places --type place --bounds 139.760 35.680 139.762 35.682 --limit 2
+```
+
+Windows以外:
+
+```sh
+uv run --isolated --no-project --no-cache --python 3.12 python -B manage.py cli search --theme places --type place --bounds 139.760 35.680 139.762 35.682 --limit 2
+```
 
 ## インストール・起動
 
@@ -86,7 +98,11 @@ Python本体、pip、uv、OS、DuckDBの通信で使う証明書の更新は、�
 
 `clean`はソース・docs・Gitを保持し、`.runtime`と旧版のリポジトリ内`.venv`・`.cache`・`dist`・既知のテストキャッシュ・bytecodeを削除します。稼働中のMCPがあれば拒否し、所有マーカーがない保存先や想定外のファイル、外部へのリンクも拒否します。再度`run`すれば依存・拡張を再取得できます。サイズはbytes / MiBとファイル数で表示し、物理占有量とは異なる場合があります。
 
-MCP設定の削除だけではファイルは消えません。設定を外してMCPを停止した後に`clean`を実行してください。削除している環境から管理コマンド自身を実行しないため、直接`uv run python manage.py clean`は使わず、上記のPowerShell wrapperか`uv run --isolated --no-project --no-cache --python 3.12 python -B manage.py clean`を使います。
+ファイルを削除するには、MCP設定を外してサーバーを停止してから、`clean` を実行します。削除対象の環境に依存しないよう、Windowsでは上記のPowerShellコマンドを使ってください。Windows以外では次のコマンドを使います。
+
+```sh
+uv run --isolated --no-project --no-cache --python 3.12 python -B manage.py clean
+```
 
 uv本体、共有Python、ユーザーホームの `.duckdb/extensions` は削除対象外です。このMCPが取得するDuckDB拡張は `.runtime` 内に保存し、共有拡張の容量は別に表示します。管理用の `.runtime.lock`（1 byte）はリポジトリに残ります。保存量は依存関係や拡張のバージョンによって変わります。固定の容量上限はありません。
 
@@ -127,7 +143,7 @@ uv本体、共有Python、ユーザーホームの `.duckdb/extensions` は削�
 
 ## 結果・上限
 
-- 結果は`release`, `theme`, `feature_type`, `scope`, `source`, `license`, `attribution_url`, `data`, `next_cursor`, `warnings`を持つ構造化データです。
+- 結果には対象の `release`、`theme`、`feature_type`、`scope` が含まれます。出典と利用条件は `source`、`license`、`attribution_url` で確認できます。取得したデータ、次ページの位置、警告はそれぞれ `data`、`next_cursor`、`warnings` で返ります。
 - WGS84の矩形範囲は東西・南北1度以内、概算2500km²以内。日付変更線をまたぐ範囲は分割します。
 - 1ページ最大50件。次ページではrelease・範囲・フィルタ・geometry設定を維持します。
 - bboxで候補を絞り、geometryとの交差・距離条件で地物を選びます。件数はレコード数。面積・線の長さは別の指標で、WGS84楕円体のm² / mです。
@@ -165,7 +181,11 @@ uv build
 
 ローカルの合成Parquet fixtureによるSQL・geometry・ページング・集計検証とMCP接続試験を既定にします。公開データの問い合わせや実クライアント接続の結果は[validation](docs/validation.md)で別に記録します。
 
-公開データを実際に読む接続確認は`uv run python scripts/verify_managed.py`（管理コマンド経由のstdio・Places検索・稼働中削除の拒否）、`uv run python scripts/verify_live.py`（stdio・6テーマ）、`uv run python scripts/verify_http.py`（loopback HTTP・catalog）。既定のpytestには含まれません。
+公開データに接続して確認する場合は、目的に応じて次のコマンドを実行します。これらの確認は通常のpytestには含まれません。
+
+- `uv run python scripts/verify_managed.py` で、管理コマンド経由のstdio接続、施設検索、稼働中に削除を拒否する動作を確認します。
+- `uv run python scripts/verify_live.py` で、stdio接続から6テーマを確認します。
+- `uv run python scripts/verify_http.py` で、ループバックのHTTP接続とカタログ取得を確認します。
 
 `uv run python scripts/verify_complete.py` は、全15タイプについて、公式の列定義と取得結果、条件付きの件数、地物の詳細を公開データで照合します。空間検索、計測、結合、ID解決、リリース間の比較も確認します。地理データはディスクに保存しません。この検証の対象はツールの動作です。
 
