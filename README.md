@@ -4,7 +4,7 @@ Overture Mapsの6テーマを検索・分析する、Pythonライブラリ・CLI
 
 Python 3.12以上、uv、DuckDBを使用し、MCP接続には任意依存の公式MCP Python SDKを使います。住所から座標を得る処理はgeo-jp-mcp等へ任せ、座標・検索範囲・地物IDを渡して組み合わせます。
 
-## Pythonライブラリ・CLI（0.3.0）
+## Pythonライブラリ・CLI
 
 通常のインストールにはMCP SDKを含みません。MCPサーバーを使う場合だけ`[mcp]`を追加します。PyPIには未公開のため、取得したこのリポジトリからインストールしてください。
 
@@ -29,7 +29,7 @@ print(result.data)
 print(client.storage_dir)
 ```
 
-ライブラリ・CLI・MCPは同じ9操作、型付き入力検証とResponseを使います。結果・出典を含むJSON、全操作の引数、JSONファイル・stdin、エラー、保存先と互換性の契約は[ライブラリ・CLIガイド](docs/library-cli.md)を参照してください。
+Python、CLI、MCPで同じ9種類の操作を使えます。引数の型と検証ルールは共通です。結果と出典の形式、JSONファイルや標準入力からの指定方法、エラー、保存先は[ライブラリ・CLIガイド](docs/library-cli.md)を参照してください。
 
 リポジトリから依存を専用保存先へ集めてCLIを使う場合は`./manage.ps1 cli search --theme places --type place --bounds 139.760 35.680 139.762 35.682 --limit 2`。Windows以外は`uv run --isolated --no-project --no-cache --python 3.12 python -B manage.py cli search ...`。
 
@@ -60,19 +60,24 @@ Streamable HTTPは`.\manage.ps1 run -Transport streamable-http`、接続先は`h
 
 Sites向けには[認証backend＋Worker adapterの手順](docs/sites.md)を用意しています。DuckDBは別Pythonホストで実行し、`-SitesBackend`でサービス認証付きのstateless HTTPを起動します。Sites OAuthとユーザー認可はWorker側で扱います。Python API・CLI・stdioの9操作は共通で、Sites単体では実行しません。
 
-Workerの`/mcp`ではOrigin欠如・同一Site originを許可し、foreign Originはbackend接続前に403で拒否します。Node testsでこの入口境界を検証し、backend SDKのOrigin検証と区別しています。
+Workerの `/mcp` は、`Origin` ヘッダーがないリクエストと、Sitesと同じオリジンからのリクエストを受け付けます。別のオリジンからのリクエストには、バックエンドに接続せずHTTP 403を返します。
 
 ## TLS証明書と実行環境の更新
 
-HTTPXによる外向きのcatalog/STAC取得はcertifiのCAバンドルを使用します。[emSignのルート証明書削除に関する勧告](https://github.com/certifi/python-certifi/security/advisories/GHSA-6q48-6c7w-9gw2)への対応として、依存条件を`certifi>=2026.10.19`とし、`uv.lock`も更新しています。管理起動は`uv sync/run --frozen`を使うため、更新したcheckoutでMCPを停止してから`./manage.ps1 setup`（非Windows: `uv run --isolated --no-project --no-cache --python 3.12 python -B manage.py setup`）を実行し、再起動してください。開発環境では`setup -Dev`／`setup --dev`を使います。別環境へwheelやローカルパスから導入した場合も、その環境のパッケージを更新してください。
+カタログとSTACの取得に使うHTTPXは、`certifi>=2026.10.19` のCAバンドルで証明書を検証します。[certifiのセキュリティ勧告](https://github.com/certifi/python-certifi/security/advisories/GHSA-6q48-6c7w-9gw2)
 
-この依存更新はPython本体、pip/uvが内蔵するCA、OSの信頼ストア、DuckDBの通信経路を更新しません。[Python公式の案内](https://blog.python.org/2026/10/python-3151-3149-31317/)も参照し、利用するPython配布元・インストーラー、pip、uv、OSのCA更新を別途確認してください。既存の仮想環境も対象です。TLS検証を無効化して回避しないでください。
+実行環境の依存関係を更新するときは、MCPを停止し、次のコマンドを実行してから再起動してください。
+
+- Windows: `./manage.ps1 setup`
+- Windows以外: `uv run --isolated --no-project --no-cache --python 3.12 python -B manage.py setup`
+
+開発環境ではそれぞれ `setup -Dev`、`setup --dev` を使います。wheelやローカルパスからインストールした場合は、インストール先の環境でパッケージを更新してください。
+
+Python本体、pip、uv、OS、DuckDBの通信で使う証明書の更新は、利用環境ごとに別途確認してください。既存の仮想環境も確認の対象です。TLS検証を無効にしないでください。[Python公式の案内](https://blog.python.org/2026/10/python-3151-3149-31317/)
 
 ## PCの保存容量と削除
 
 管理コマンド経由の起動では、Python依存・uvキャッシュ・DuckDB拡張・Python bytecodeをリポジトリ内の`.runtime`へ集約します。地理データの永続DBやディスクキャッシュは作りません。起動時に現在の保存容量をstderrへ表示します。
-
-開発テストの合成Parquet fixtureも`.runtime/pytest/tmp`へ置き、同じcleanで削除できます。
 
 ```powershell
 .\manage.ps1 storage   # 保存先・内訳・旧保存先・対象外の共有拡張のサイズを表示
@@ -83,7 +88,7 @@ HTTPXによる外向きのcatalog/STAC取得はcertifiのCAバンドルを使用
 
 MCP設定の削除だけではファイルは消えません。設定を外してMCPを停止した後に`clean`を実行してください。削除している環境から管理コマンド自身を実行しないため、直接`uv run python manage.py clean`は使わず、上記のPowerShell wrapperか`uv run --isolated --no-project --no-cache --python 3.12 python -B manage.py clean`を使います。
 
-uv本体・共有Python本体・以前に作られたユーザーホームの`.duckdb/extensions`は削除対象外です。共有拡張は容量表示で別に示し、今後の本MCPはそこへ新規保存しません。管理用の`.runtime.lock`（1 byte）はリポジトリに残します。通常の利用での保存量は依存や拡張の版により変わり、固定のディスク容量上限は設定していません。
+uv本体、共有Python、ユーザーホームの `.duckdb/extensions` は削除対象外です。このMCPが取得するDuckDB拡張は `.runtime` 内に保存し、共有拡張の容量は別に表示します。管理用の `.runtime.lock`（1 byte）はリポジトリに残ります。保存量は依存関係や拡張のバージョンによって変わります。固定の容量上限はありません。
 
 ## Tools
 
@@ -116,9 +121,9 @@ uv本体・共有Python本体・以前に作られたユーザーホームの`.d
 }
 ```
 
-この版は説明例です。公開データは最大60日保持のため、実利用時はcatalogが返す版を使います。Placesの分類は現行`taxonomy.primary`、名前は大文字小文字を区別しない文字列包含で検索します。存在しない列のフィルタは無視せずエラーを返します。
+例にあるリリースは指定方法を示すものです。公開データの保持期間は最大60日なので、検索には `overture_catalog` が返すリリースを使ってください。施設の分類は `taxonomy.primary` で絞り込めます。名前は大文字・小文字を区別せず、部分一致で検索します。存在しない列を条件に指定するとエラーになります。
 
-0.2.0では属性を既定で全列返し、`fields`で選択できます。`filters`は型付きの20条件、構造体・配列内の属性も扱います。半径・近傍・Polygon/MultiPolygon、検索と同条件の数値/空間集計、空間結合と版比較の具体例と計測の意味は[検索・分析ガイド](docs/analysis.md)を参照してください。
+属性は既定で全列を返します。必要な列だけ取得するには `fields` を指定します。`filters` では型に応じた20種類の条件を使え、構造体や配列に含まれる属性も指定できます。範囲検索、集計、空間結合、リリース間の比較の例は[検索・分析ガイド](docs/analysis.md)を参照してください。
 
 ## 結果・上限
 
@@ -162,6 +167,6 @@ uv build
 
 公開データを実際に読む接続確認は`uv run python scripts/verify_managed.py`（管理コマンド経由のstdio・Places検索・稼働中削除の拒否）、`uv run python scripts/verify_live.py`（stdio・6テーマ）、`uv run python scripts/verify_http.py`（loopback HTTP・catalog）。既定のpytestには含まれません。
 
-`uv run python scripts/verify_complete.py`は全15タイプの公式列を全属性取得・条件付き件数・詳細取得と照合し、新しい空間検索・計測・結合・ID解決・版比較も公開データで確認します。地理データをディスクに保存しません。地域網羅率の調査とは別の機能検証です。
+`uv run python scripts/verify_complete.py` は、全15タイプについて、公式の列定義と取得結果、条件付きの件数、地物の詳細を公開データで照合します。空間検索、計測、結合、ID解決、リリース間の比較も確認します。地理データはディスクに保存しません。この検証の対象はツールの動作です。
 
 設計・受入条件: [requirements](docs/requirements.md)。参考: [PlaceRoot](https://github.com/chuofringer/placeroot)、[Overture Maps MCP Server](https://github.com/srivinod1/overture-mcp-server)、[Soapbox MCP](https://github.com/soapboxbuild/overture-mcp)。これらの機能分割を参考にし、コードは複製していません。
